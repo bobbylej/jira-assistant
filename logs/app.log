@@ -1,0 +1,1384 @@
+{
+  "timestamp": "2025-03-01T18:21:55.575Z",
+  "type": "TRANSCRIBE_REQUEST",
+  "data": {
+    "fileSize": 242118,
+    "mimeType": "audio/wav"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:21:56.999Z",
+  "type": "TRANSCRIBE_RESPONSE",
+  "data": {
+    "transcription": "so in a scrum project i want to create some tickets but i will tell more about them in the next recording"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:21:57.029Z",
+  "type": "INTERPRET_REQUEST",
+  "data": {
+    "text": "so in a scrum project i want to create some tickets but i will tell more about them in the next recording"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:21:57.508Z",
+  "type": "INTERPRET_RESPONSE",
+  "data": {
+    "action": {
+      "actionType": "storeContext",
+      "parameters": {
+        "context": "so in a scrum project i want to create some tickets but i will tell more about them in the next recording"
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:21:57.515Z",
+  "type": "JIRA_ACTION_REQUEST",
+  "data": {
+    "action": {
+      "actionType": "storeContext",
+      "parameters": {
+        "context": "so in a scrum project i want to create some tickets but i will tell more about them in the next recording"
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:21:57.516Z",
+  "type": "JIRA_ACTION_CONTEXT",
+  "data": {
+    "response": {
+      "success": true,
+      "message": "Context stored for future reference.",
+      "isContextOnly": true
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:22:20.120Z",
+  "type": "TRANSCRIBE_REQUEST",
+  "data": {
+    "fileSize": 188782,
+    "mimeType": "audio/wav"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:22:23.110Z",
+  "type": "TRANSCRIBE_RESPONSE",
+  "data": {
+    "transcription": "create a ticket to record and transcript some voice message and convert it into the Jira tickets"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:22:23.119Z",
+  "type": "INTERPRET_REQUEST",
+  "data": {
+    "text": "create a ticket to record and transcript some voice message and convert it into the Jira tickets"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:22:26.776Z",
+  "type": "INTERPRET_RESPONSE",
+  "data": {
+    "action": {
+      "actionType": "createIssue",
+      "parameters": {
+        "projectKey": "SCRUM",
+        "summary": "Record and transcript voice message for Jira tickets creation",
+        "description": "Create a ticket to record and transcript some voice message and convert it into the Jira tickets"
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:22:27.070Z",
+  "type": "JIRA_ACTION_REQUEST",
+  "data": {
+    "action": {
+      "actionType": "createIssue",
+      "parameters": {
+        "projectKey": "SCRUM",
+        "summary": "Record and transcript voice message for Jira tickets creation",
+        "description": "Create a ticket to record and transcript some voice message and convert it into the Jira tickets"
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:22:27.827Z",
+  "type": "JIRA_ACTION_RESPONSE",
+  "data": {
+    "result": {
+      "success": true,
+      "message": "Issue created successfully: SCRUM-2",
+      "data": {
+        "id": "10006",
+        "key": "SCRUM-2",
+        "self": "https://bobbylej.atlassian.net/rest/api/2/issue/10006"
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:22:58.064Z",
+  "type": "TRANSCRIBE_REQUEST",
+  "data": {
+    "fileSize": 201372,
+    "mimeType": "audio/wav"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:22:59.664Z",
+  "type": "TRANSCRIBE_RESPONSE",
+  "data": {
+    "transcription": "Add some details for this ticket, some more tech details that might be useful for the devs for implementing that."
+  }
+},
+{
+  "timestamp": "2025-03-01T18:22:59.670Z",
+  "type": "INTERPRET_REQUEST",
+  "data": {
+    "text": "Add some details for this ticket, some more tech details that might be useful for the devs for implementing that."
+  }
+},
+{
+  "timestamp": "2025-03-01T18:23:01.900Z",
+  "type": "INTERPRET_ERROR",
+  "data": {
+    "error": "Failed to interpret voice command",
+    "stack": "Error: Failed to interpret voice command\n    at Object.interpretCommand (/Users/mateuszadamczyk/Documents/Private/doit-jira/src/openaiService.js:174:15)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async /Users/mateuszadamczyk/Documents/Private/doit-jira/src/app.js:91:24"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:25:36.773Z",
+  "type": "TRANSCRIBE_REQUEST",
+  "data": {
+    "fileSize": 42057,
+    "mimeType": "audio/wav"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:25:37.981Z",
+  "type": "TRANSCRIBE_RESPONSE",
+  "data": {
+    "transcription": "Okay, try again."
+  }
+},
+{
+  "timestamp": "2025-03-01T18:25:38.018Z",
+  "type": "INTERPRET_REQUEST",
+  "data": {
+    "text": "Okay, try again."
+  }
+},
+{
+  "timestamp": "2025-03-01T18:25:38.492Z",
+  "type": "INTERPRET_RESPONSE",
+  "data": {
+    "action": {
+      "actionType": "storeContext",
+      "parameters": {
+        "context": "Okay, try again."
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:25:38.504Z",
+  "type": "JIRA_ACTION_REQUEST",
+  "data": {
+    "action": {
+      "actionType": "storeContext",
+      "parameters": {
+        "context": "Okay, try again."
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:25:38.505Z",
+  "type": "JIRA_ACTION_CONTEXT",
+  "data": {
+    "response": {
+      "success": true,
+      "message": "Context stored for future reference.",
+      "isContextOnly": true
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:26:06.447Z",
+  "type": "TRANSCRIBE_REQUEST",
+  "data": {
+    "fileSize": 365581,
+    "mimeType": "audio/wav"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:26:08.925Z",
+  "type": "TRANSCRIBE_RESPONSE",
+  "data": {
+    "transcription": "So, in Project Scrum, for the Ticket Scrum 2, we update the description and add some details for, tech details for developers to help them implement this functionality."
+  }
+},
+{
+  "timestamp": "2025-03-01T18:26:08.931Z",
+  "type": "INTERPRET_REQUEST",
+  "data": {
+    "text": "So, in Project Scrum, for the Ticket Scrum 2, we update the description and add some details for, tech details for developers to help them implement this functionality."
+  }
+},
+{
+  "timestamp": "2025-03-01T18:26:10.232Z",
+  "type": "INTERPRET_RESPONSE",
+  "data": {
+    "action": {
+      "actionType": "storeContext",
+      "parameters": {
+        "context": "So, in Project Scrum, for the Ticket Scrum 2, we update the description and add some details for, tech details for developers to help them implement this functionality."
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:26:10.238Z",
+  "type": "JIRA_ACTION_REQUEST",
+  "data": {
+    "action": {
+      "actionType": "storeContext",
+      "parameters": {
+        "context": "So, in Project Scrum, for the Ticket Scrum 2, we update the description and add some details for, tech details for developers to help them implement this functionality."
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:26:10.239Z",
+  "type": "JIRA_ACTION_CONTEXT",
+  "data": {
+    "response": {
+      "success": true,
+      "message": "Context stored for future reference.",
+      "isContextOnly": true
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:26:29.963Z",
+  "type": "TRANSCRIBE_REQUEST",
+  "data": {
+    "fileSize": 48759,
+    "mimeType": "audio/wav"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:26:31.099Z",
+  "type": "TRANSCRIBE_RESPONSE",
+  "data": {
+    "transcription": "I want you to do it."
+  }
+},
+{
+  "timestamp": "2025-03-01T18:26:31.107Z",
+  "type": "INTERPRET_REQUEST",
+  "data": {
+    "text": "I want you to do it."
+  }
+},
+{
+  "timestamp": "2025-03-01T18:26:34.353Z",
+  "type": "INTERPRET_RESPONSE",
+  "data": {
+    "action": {
+      "actionType": "updateIssue",
+      "parameters": {
+        "projectKey": "SCRUM",
+        "issueKey": "SCRUM-2",
+        "description": "Add tech details for developers to help them implement this functionality."
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:26:34.360Z",
+  "type": "JIRA_ACTION_REQUEST",
+  "data": {
+    "action": {
+      "actionType": "updateIssue",
+      "parameters": {
+        "projectKey": "SCRUM",
+        "issueKey": "SCRUM-2",
+        "description": "Add tech details for developers to help them implement this functionality."
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:26:35.010Z",
+  "type": "JIRA_ACTION_RESPONSE",
+  "data": {
+    "result": {
+      "success": true,
+      "message": "Issue SCRUM-2 updated successfully"
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:27:05.308Z",
+  "type": "TRANSCRIBE_REQUEST",
+  "data": {
+    "fileSize": 283999,
+    "mimeType": "audio/wav"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:27:06.297Z",
+  "type": "TRANSCRIBE_RESPONSE",
+  "data": {
+    "transcription": "Now, I want you to generate some details that might be helpful for developers to implement this ticket."
+  }
+},
+{
+  "timestamp": "2025-03-01T18:27:06.303Z",
+  "type": "INTERPRET_REQUEST",
+  "data": {
+    "text": "Now, I want you to generate some details that might be helpful for developers to implement this ticket."
+  }
+},
+{
+  "timestamp": "2025-03-01T18:27:11.741Z",
+  "type": "INTERPRET_RESPONSE",
+  "data": {
+    "action": {
+      "actionType": "addComment",
+      "parameters": {
+        "issueKey": "SCRUM-2",
+        "comment": "Generate detailed information to help developers implement this functionality."
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:27:11.745Z",
+  "type": "JIRA_ACTION_REQUEST",
+  "data": {
+    "action": {
+      "actionType": "addComment",
+      "parameters": {
+        "issueKey": "SCRUM-2",
+        "comment": "Generate detailed information to help developers implement this functionality."
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:27:12.216Z",
+  "type": "JIRA_ACTION_RESPONSE",
+  "data": {
+    "result": {
+      "success": true,
+      "message": "Comment added to issue SCRUM-2"
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:32:09.740Z",
+  "type": "TRANSCRIBE_REQUEST",
+  "data": {
+    "fileSize": 323808,
+    "mimeType": "audio/wav"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:32:12.219Z",
+  "type": "TRANSCRIBE_RESPONSE",
+  "data": {
+    "transcription": "In a scrum project, get the scrum2 ticket, read the title and add some technical details that will be helpful for developers to implement this ticket."
+  }
+},
+{
+  "timestamp": "2025-03-01T18:32:12.274Z",
+  "type": "INTERPRET_REQUEST",
+  "data": {
+    "text": "In a scrum project, get the scrum2 ticket, read the title and add some technical details that will be helpful for developers to implement this ticket."
+  }
+},
+{
+  "timestamp": "2025-03-01T18:32:14.610Z",
+  "type": "INTERPRET_ERROR",
+  "data": {
+    "error": "Failed to interpret voice command",
+    "stack": "Error: Failed to interpret voice command\n    at Object.interpretCommand (/Users/mateuszadamczyk/Documents/Private/doit-jira/src/openaiService.js:344:15)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async /Users/mateuszadamczyk/Documents/Private/doit-jira/src/app.js:91:24"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:34:16.635Z",
+  "type": "TRANSCRIBE_REQUEST",
+  "data": {
+    "fileSize": 283945,
+    "mimeType": "audio/wav"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:34:18.375Z",
+  "type": "TRANSCRIBE_RESPONSE",
+  "data": {
+    "transcription": "in scrum project get the scrum2 ticket read the title and add some details that might be helpful for developers to implement this feature"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:34:18.400Z",
+  "type": "INTERPRET_REQUEST",
+  "data": {
+    "text": "in scrum project get the scrum2 ticket read the title and add some details that might be helpful for developers to implement this feature"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:34:22.366Z",
+  "type": "INTERPRET_RESPONSE",
+  "data": {
+    "action": {
+      "actionType": "error",
+      "parameters": {
+        "message": "I couldn't find the specific ticket with the title containing \"scrum2\" in the Scrum project. Could you provide more details or check the ticket key again?"
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:34:22.374Z",
+  "type": "JIRA_ACTION_REQUEST",
+  "data": {
+    "action": {
+      "actionType": "error",
+      "parameters": {
+        "message": "I couldn't find the specific ticket with the title containing \"scrum2\" in the Scrum project. Could you provide more details or check the ticket key again?"
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:34:22.374Z",
+  "type": "JIRA_ACTION_ERROR_RESPONSE",
+  "data": {
+    "response": {
+      "success": false,
+      "message": "I couldn't find the specific ticket with the title containing \"scrum2\" in the Scrum project. Could you provide more details or check the ticket key again?",
+      "isError": true
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:34:30.460Z",
+  "type": "TRANSCRIBE_REQUEST",
+  "data": {
+    "fileSize": 46859,
+    "mimeType": "audio/wav"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:34:31.706Z",
+  "type": "TRANSCRIBE_RESPONSE",
+  "data": {
+    "transcription": "it should be scram-2"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:34:31.713Z",
+  "type": "INTERPRET_REQUEST",
+  "data": {
+    "text": "it should be scram-2"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:34:32.217Z",
+  "type": "INTERPRET_RESPONSE",
+  "data": {
+    "action": {
+      "actionType": "storeContext",
+      "parameters": {
+        "context": "it should be scram-2"
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:34:32.223Z",
+  "type": "JIRA_ACTION_REQUEST",
+  "data": {
+    "action": {
+      "actionType": "storeContext",
+      "parameters": {
+        "context": "it should be scram-2"
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:34:32.223Z",
+  "type": "JIRA_ACTION_CONTEXT",
+  "data": {
+    "response": {
+      "success": true,
+      "message": "Context stored for future reference.",
+      "isContextOnly": true
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:34:50.098Z",
+  "type": "TRANSCRIBE_REQUEST",
+  "data": {
+    "fileSize": 162731,
+    "mimeType": "audio/wav"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:34:51.240Z",
+  "type": "TRANSCRIBE_RESPONSE",
+  "data": {
+    "transcription": "Now take this ticket, read the title and add some technical details that might be helpful to implement this feature."
+  }
+},
+{
+  "timestamp": "2025-03-01T18:34:51.248Z",
+  "type": "INTERPRET_REQUEST",
+  "data": {
+    "text": "Now take this ticket, read the title and add some technical details that might be helpful to implement this feature."
+  }
+},
+{
+  "timestamp": "2025-03-01T18:34:53.913Z",
+  "type": "INTERPRET_RESPONSE",
+  "data": {
+    "action": {
+      "actionType": "error",
+      "parameters": {
+        "message": "I couldn't retrieve the details for the \"scram-2\" ticket. It seems that the issue does not exist or I do not have permission to access it."
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:34:53.922Z",
+  "type": "JIRA_ACTION_REQUEST",
+  "data": {
+    "action": {
+      "actionType": "error",
+      "parameters": {
+        "message": "I couldn't retrieve the details for the \"scram-2\" ticket. It seems that the issue does not exist or I do not have permission to access it."
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:34:53.923Z",
+  "type": "JIRA_ACTION_ERROR_RESPONSE",
+  "data": {
+    "response": {
+      "success": false,
+      "message": "I couldn't retrieve the details for the \"scram-2\" ticket. It seems that the issue does not exist or I do not have permission to access it.",
+      "isError": true
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:35:14.450Z",
+  "type": "TRANSCRIBE_REQUEST",
+  "data": {
+    "fileSize": 80074,
+    "mimeType": "audio/wav"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:35:15.793Z",
+  "type": "TRANSCRIBE_RESPONSE",
+  "data": {
+    "transcription": "It's not scrum, it's groom too."
+  }
+},
+{
+  "timestamp": "2025-03-01T18:35:15.801Z",
+  "type": "INTERPRET_REQUEST",
+  "data": {
+    "text": "It's not scrum, it's groom too."
+  }
+},
+{
+  "timestamp": "2025-03-01T18:35:16.237Z",
+  "type": "INTERPRET_RESPONSE",
+  "data": {
+    "action": {
+      "actionType": "storeContext",
+      "parameters": {
+        "context": "It's not scrum, it's groom too."
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:35:16.243Z",
+  "type": "JIRA_ACTION_REQUEST",
+  "data": {
+    "action": {
+      "actionType": "storeContext",
+      "parameters": {
+        "context": "It's not scrum, it's groom too."
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:35:16.243Z",
+  "type": "JIRA_ACTION_CONTEXT",
+  "data": {
+    "response": {
+      "success": true,
+      "message": "Context stored for future reference.",
+      "isContextOnly": true
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:35:26.247Z",
+  "type": "TRANSCRIBE_REQUEST",
+  "data": {
+    "fileSize": 55578,
+    "mimeType": "audio/wav"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:35:27.038Z",
+  "type": "TRANSCRIBE_RESPONSE",
+  "data": {
+    "transcription": "No, scrum dash two."
+  }
+},
+{
+  "timestamp": "2025-03-01T18:35:27.044Z",
+  "type": "INTERPRET_REQUEST",
+  "data": {
+    "text": "No, scrum dash two."
+  }
+},
+{
+  "timestamp": "2025-03-01T18:35:27.533Z",
+  "type": "INTERPRET_RESPONSE",
+  "data": {
+    "action": {
+      "actionType": "storeContext",
+      "parameters": {
+        "context": "No, scrum dash two."
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:35:27.542Z",
+  "type": "JIRA_ACTION_REQUEST",
+  "data": {
+    "action": {
+      "actionType": "storeContext",
+      "parameters": {
+        "context": "No, scrum dash two."
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:35:27.544Z",
+  "type": "JIRA_ACTION_CONTEXT",
+  "data": {
+    "response": {
+      "success": true,
+      "message": "Context stored for future reference.",
+      "isContextOnly": true
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:35:32.706Z",
+  "type": "TRANSCRIBE_REQUEST",
+  "data": {
+    "fileSize": 22806,
+    "mimeType": "audio/wav"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:35:33.736Z",
+  "type": "TRANSCRIBE_RESPONSE",
+  "data": {
+    "transcription": "Now do it."
+  }
+},
+{
+  "timestamp": "2025-03-01T18:35:33.744Z",
+  "type": "INTERPRET_REQUEST",
+  "data": {
+    "text": "Now do it."
+  }
+},
+{
+  "timestamp": "2025-03-01T18:35:35.898Z",
+  "type": "INTERPRET_RESPONSE",
+  "data": {
+    "action": {
+      "actionType": "error",
+      "parameters": {
+        "message": "I couldn't retrieve the details for the \"SCRAM-2\" ticket. It seems that the issue does not exist or I do not have permission to access it."
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:35:35.906Z",
+  "type": "JIRA_ACTION_REQUEST",
+  "data": {
+    "action": {
+      "actionType": "error",
+      "parameters": {
+        "message": "I couldn't retrieve the details for the \"SCRAM-2\" ticket. It seems that the issue does not exist or I do not have permission to access it."
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:35:35.906Z",
+  "type": "JIRA_ACTION_ERROR_RESPONSE",
+  "data": {
+    "response": {
+      "success": false,
+      "message": "I couldn't retrieve the details for the \"SCRAM-2\" ticket. It seems that the issue does not exist or I do not have permission to access it.",
+      "isError": true
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:35:55.394Z",
+  "type": "TRANSCRIBE_REQUEST",
+  "data": {
+    "fileSize": 83767,
+    "mimeType": "audio/wav"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:35:56.570Z",
+  "type": "TRANSCRIBE_RESPONSE",
+  "data": {
+    "transcription": "SCRUM-2"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:35:56.577Z",
+  "type": "INTERPRET_REQUEST",
+  "data": {
+    "text": "SCRUM-2"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:36:24.878Z",
+  "type": "INTERPRET_RESPONSE",
+  "data": {
+    "action": {
+      "actionType": "addComment",
+      "parameters": {
+        "issueKey": "SCRUM-2",
+        "comment": "Add more technical details to assist developers in implementing this functionality."
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:36:24.886Z",
+  "type": "JIRA_ACTION_REQUEST",
+  "data": {
+    "action": {
+      "actionType": "addComment",
+      "parameters": {
+        "issueKey": "SCRUM-2",
+        "comment": "Add more technical details to assist developers in implementing this functionality."
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:36:25.328Z",
+  "type": "JIRA_ACTION_RESPONSE",
+  "data": {
+    "result": {
+      "success": true,
+      "message": "Comment added to issue SCRUM-2"
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:37:15.238Z",
+  "type": "TRANSCRIBE_REQUEST",
+  "data": {
+    "fileSize": 340597,
+    "mimeType": "audio/wav"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:37:17.114Z",
+  "type": "TRANSCRIBE_RESPONSE",
+  "data": {
+    "transcription": "I don't want you to make a comment for the ticket but to generate the details that might be needed for the developers and put it in the description of this task."
+  }
+},
+{
+  "timestamp": "2025-03-01T18:37:17.122Z",
+  "type": "INTERPRET_REQUEST",
+  "data": {
+    "text": "I don't want you to make a comment for the ticket but to generate the details that might be needed for the developers and put it in the description of this task."
+  }
+},
+{
+  "timestamp": "2025-03-01T18:37:18.688Z",
+  "type": "INTERPRET_RESPONSE",
+  "data": {
+    "action": {
+      "actionType": "updateIssue",
+      "parameters": {
+        "issueKey": "SCRUM-2",
+        "description": "Add more technical details to assist developers in implementing this functionality."
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:37:18.693Z",
+  "type": "JIRA_ACTION_REQUEST",
+  "data": {
+    "action": {
+      "actionType": "updateIssue",
+      "parameters": {
+        "issueKey": "SCRUM-2",
+        "description": "Add more technical details to assist developers in implementing this functionality."
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:37:19.154Z",
+  "type": "JIRA_ACTION_RESPONSE",
+  "data": {
+    "result": {
+      "success": true,
+      "message": "Issue SCRUM-2 updated successfully"
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:44:09.594Z",
+  "type": "TRANSCRIBE_REQUEST",
+  "data": {
+    "fileSize": 360656,
+    "mimeType": "audio/wav"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:44:11.875Z",
+  "type": "TRANSCRIBE_RESPONSE",
+  "data": {
+    "transcription": "In scrum project, get the ticket scrum-2, read the summary and add some description that will be helpful for developers to implement it."
+  }
+},
+{
+  "timestamp": "2025-03-01T18:44:11.904Z",
+  "type": "INTERPRET_REQUEST",
+  "data": {
+    "text": "In scrum project, get the ticket scrum-2, read the summary and add some description that will be helpful for developers to implement it."
+  }
+},
+{
+  "timestamp": "2025-03-01T18:44:19.036Z",
+  "type": "INTERPRET_RESPONSE",
+  "data": {
+    "action": {
+      "actionType": "error",
+      "parameters": {
+        "message": "{\"actionType\":\"updateIssue\",\"parameters\":{\"issueKey\":\"scrum-2\",\"description\":\"## OVERVIEW\\nDevelop a feature to enable users to record and transcribe voice messages for creating Jira tickets directly within the application. This feature aims to enhance user experience by providing an alternative method for creating tickets, particularly useful for hands-free scenarios or when typing is not convenient.\\n\\n## TECHNICAL REQUIREMENTS\\n- **Architecture/Design Patterns**: Utilize a microservices architecture to handle voice recording, transcription, and integration with Jira.\\n- **Key Components/Classes**:\\n  - Voice Recording Service\\n  - Transcription Service\\n  - Jira Integration Service\\n- **APIs/Libraries**:\\n  - Google Cloud Speech-to-Text API for transcription\\n  - Web Audio API for voice recording\\n- **Data Models/Storage**:\\n  - Store voice recordings temporarily for transcription\\n  - Store transcribed text along with Jira ticket details\\n\\n## IMPLEMENTATION DETAILS\\n1. **Voice Recording**:\\n   - Implement a service to capture voice messages using Web Audio API.\\n   - Sample pseudocode:\\n     ```\\n     function startRecording() {\\n       // Logic to start recording\\n     }\\n     ```\\n2. **Transcription**:\\n   - Integrate Google Cloud Speech-to-Text API to transcribe voice recordings.\\n   - Handle authentication and error scenarios.\\n3. **Jira Integration**:\\n   - Create a service to interact with Jira API for creating tickets.\\n   - Include transcribed text and any additional user-provided details.\\n4. **Challenges**:\\n   - **Real-time Transcription**: Ensure smooth integration for real-time transcription.\\n   - **Error Handling**: Implement robust error handling for API failures.\\n\\n## ACCEPTANCE CRITERIA\\n- User can initiate voice recording within the Jira application.\\n- Recorded voice message is transcribed accurately.\\n- Transcribed text is used to create a new Jira ticket.\\n- Feature works seamlessly across different devices and browsers.\\n  \\n## TESTING CONSIDERATIONS\\n- **Types of Tests**:\\n  - Unit tests for individual services (Voice Recording, Transcription, Jira Integration).\\n  - Integration tests to ensure components work together.\\n- **Test Scenarios**:\\n  - Validate voice recording functionality.\\n  - Test transcription accuracy.\\n  - Verify successful creation of Jira tickets.\\n  \\n## DEPENDENCIES & RISKS\\n- **Dependencies**:\\n  - Google Cloud Speech-to-Text API for transcription.\\n  - Jira API for creating tickets.\\n- **Risks**:\\n  - API downtimes affecting transcription and ticket creation.\\n- **Mitigation**:\\n  - Implement retry mechanisms for API calls.\\n  - Provide graceful error handling for users.\\n\\nThis comprehensive Jira ticket provides a detailed roadmap for implementing the voice message recording feature, ensuring clarity for developers and alignment with business objectives.\"}}"
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:44:19.043Z",
+  "type": "JIRA_ACTION_REQUEST",
+  "data": {
+    "action": {
+      "actionType": "error",
+      "parameters": {
+        "message": "{\"actionType\":\"updateIssue\",\"parameters\":{\"issueKey\":\"scrum-2\",\"description\":\"## OVERVIEW\\nDevelop a feature to enable users to record and transcribe voice messages for creating Jira tickets directly within the application. This feature aims to enhance user experience by providing an alternative method for creating tickets, particularly useful for hands-free scenarios or when typing is not convenient.\\n\\n## TECHNICAL REQUIREMENTS\\n- **Architecture/Design Patterns**: Utilize a microservices architecture to handle voice recording, transcription, and integration with Jira.\\n- **Key Components/Classes**:\\n  - Voice Recording Service\\n  - Transcription Service\\n  - Jira Integration Service\\n- **APIs/Libraries**:\\n  - Google Cloud Speech-to-Text API for transcription\\n  - Web Audio API for voice recording\\n- **Data Models/Storage**:\\n  - Store voice recordings temporarily for transcription\\n  - Store transcribed text along with Jira ticket details\\n\\n## IMPLEMENTATION DETAILS\\n1. **Voice Recording**:\\n   - Implement a service to capture voice messages using Web Audio API.\\n   - Sample pseudocode:\\n     ```\\n     function startRecording() {\\n       // Logic to start recording\\n     }\\n     ```\\n2. **Transcription**:\\n   - Integrate Google Cloud Speech-to-Text API to transcribe voice recordings.\\n   - Handle authentication and error scenarios.\\n3. **Jira Integration**:\\n   - Create a service to interact with Jira API for creating tickets.\\n   - Include transcribed text and any additional user-provided details.\\n4. **Challenges**:\\n   - **Real-time Transcription**: Ensure smooth integration for real-time transcription.\\n   - **Error Handling**: Implement robust error handling for API failures.\\n\\n## ACCEPTANCE CRITERIA\\n- User can initiate voice recording within the Jira application.\\n- Recorded voice message is transcribed accurately.\\n- Transcribed text is used to create a new Jira ticket.\\n- Feature works seamlessly across different devices and browsers.\\n  \\n## TESTING CONSIDERATIONS\\n- **Types of Tests**:\\n  - Unit tests for individual services (Voice Recording, Transcription, Jira Integration).\\n  - Integration tests to ensure components work together.\\n- **Test Scenarios**:\\n  - Validate voice recording functionality.\\n  - Test transcription accuracy.\\n  - Verify successful creation of Jira tickets.\\n  \\n## DEPENDENCIES & RISKS\\n- **Dependencies**:\\n  - Google Cloud Speech-to-Text API for transcription.\\n  - Jira API for creating tickets.\\n- **Risks**:\\n  - API downtimes affecting transcription and ticket creation.\\n- **Mitigation**:\\n  - Implement retry mechanisms for API calls.\\n  - Provide graceful error handling for users.\\n\\nThis comprehensive Jira ticket provides a detailed roadmap for implementing the voice message recording feature, ensuring clarity for developers and alignment with business objectives.\"}}"
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:44:19.045Z",
+  "type": "JIRA_ACTION_ERROR_RESPONSE",
+  "data": {
+    "response": {
+      "success": false,
+      "message": "{\"actionType\":\"updateIssue\",\"parameters\":{\"issueKey\":\"scrum-2\",\"description\":\"## OVERVIEW\\nDevelop a feature to enable users to record and transcribe voice messages for creating Jira tickets directly within the application. This feature aims to enhance user experience by providing an alternative method for creating tickets, particularly useful for hands-free scenarios or when typing is not convenient.\\n\\n## TECHNICAL REQUIREMENTS\\n- **Architecture/Design Patterns**: Utilize a microservices architecture to handle voice recording, transcription, and integration with Jira.\\n- **Key Components/Classes**:\\n  - Voice Recording Service\\n  - Transcription Service\\n  - Jira Integration Service\\n- **APIs/Libraries**:\\n  - Google Cloud Speech-to-Text API for transcription\\n  - Web Audio API for voice recording\\n- **Data Models/Storage**:\\n  - Store voice recordings temporarily for transcription\\n  - Store transcribed text along with Jira ticket details\\n\\n## IMPLEMENTATION DETAILS\\n1. **Voice Recording**:\\n   - Implement a service to capture voice messages using Web Audio API.\\n   - Sample pseudocode:\\n     ```\\n     function startRecording() {\\n       // Logic to start recording\\n     }\\n     ```\\n2. **Transcription**:\\n   - Integrate Google Cloud Speech-to-Text API to transcribe voice recordings.\\n   - Handle authentication and error scenarios.\\n3. **Jira Integration**:\\n   - Create a service to interact with Jira API for creating tickets.\\n   - Include transcribed text and any additional user-provided details.\\n4. **Challenges**:\\n   - **Real-time Transcription**: Ensure smooth integration for real-time transcription.\\n   - **Error Handling**: Implement robust error handling for API failures.\\n\\n## ACCEPTANCE CRITERIA\\n- User can initiate voice recording within the Jira application.\\n- Recorded voice message is transcribed accurately.\\n- Transcribed text is used to create a new Jira ticket.\\n- Feature works seamlessly across different devices and browsers.\\n  \\n## TESTING CONSIDERATIONS\\n- **Types of Tests**:\\n  - Unit tests for individual services (Voice Recording, Transcription, Jira Integration).\\n  - Integration tests to ensure components work together.\\n- **Test Scenarios**:\\n  - Validate voice recording functionality.\\n  - Test transcription accuracy.\\n  - Verify successful creation of Jira tickets.\\n  \\n## DEPENDENCIES & RISKS\\n- **Dependencies**:\\n  - Google Cloud Speech-to-Text API for transcription.\\n  - Jira API for creating tickets.\\n- **Risks**:\\n  - API downtimes affecting transcription and ticket creation.\\n- **Mitigation**:\\n  - Implement retry mechanisms for API calls.\\n  - Provide graceful error handling for users.\\n\\nThis comprehensive Jira ticket provides a detailed roadmap for implementing the voice message recording feature, ensuring clarity for developers and alignment with business objectives.\"}}",
+      "isError": true
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:50:16.998Z",
+  "type": "TRANSCRIBE_REQUEST",
+  "data": {
+    "fileSize": 288614,
+    "mimeType": "audio/wav"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:50:18.574Z",
+  "type": "TRANSCRIBE_RESPONSE",
+  "data": {
+    "transcription": "In project scrum get the ticket scrum2 and read it and add description to make it more helpful for developers."
+  }
+},
+{
+  "timestamp": "2025-03-01T18:50:18.599Z",
+  "type": "INTERPRET_REQUEST",
+  "data": {
+    "text": "In project scrum get the ticket scrum2 and read it and add description to make it more helpful for developers."
+  }
+},
+{
+  "timestamp": "2025-03-01T18:50:21.087Z",
+  "type": "INTERPRET_RESPONSE",
+  "data": {
+    "action": {
+      "actionType": "error",
+      "parameters": {
+        "message": "It seems that the ticket \"scrum2\" does not exist or I do not have permission to access it. Could you please provide an alternative ticket key or ensure that the correct key is provided?"
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:50:21.095Z",
+  "type": "JIRA_ACTION_REQUEST",
+  "data": {
+    "action": {
+      "actionType": "error",
+      "parameters": {
+        "message": "It seems that the ticket \"scrum2\" does not exist or I do not have permission to access it. Could you please provide an alternative ticket key or ensure that the correct key is provided?"
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:50:21.095Z",
+  "type": "JIRA_ACTION_ERROR_RESPONSE",
+  "data": {
+    "response": {
+      "success": false,
+      "message": "It seems that the ticket \"scrum2\" does not exist or I do not have permission to access it. Could you please provide an alternative ticket key or ensure that the correct key is provided?",
+      "isError": true
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:50:30.423Z",
+  "type": "TRANSCRIBE_REQUEST",
+  "data": {
+    "fileSize": 63454,
+    "mimeType": "audio/wav"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:50:31.284Z",
+  "type": "TRANSCRIBE_RESPONSE",
+  "data": {
+    "transcription": "Look for scrum-2"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:50:31.291Z",
+  "type": "INTERPRET_REQUEST",
+  "data": {
+    "text": "Look for scrum-2"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:50:31.740Z",
+  "type": "INTERPRET_RESPONSE",
+  "data": {
+    "action": {
+      "actionType": "storeContext",
+      "parameters": {
+        "context": "Look for scrum-2"
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:50:31.744Z",
+  "type": "JIRA_ACTION_REQUEST",
+  "data": {
+    "action": {
+      "actionType": "storeContext",
+      "parameters": {
+        "context": "Look for scrum-2"
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:50:31.744Z",
+  "type": "JIRA_ACTION_CONTEXT",
+  "data": {
+    "response": {
+      "success": true,
+      "message": "Context stored for future reference.",
+      "isContextOnly": true
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:50:38.340Z",
+  "type": "TRANSCRIBE_REQUEST",
+  "data": {
+    "fileSize": 38150,
+    "mimeType": "audio/wav"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:50:39.647Z",
+  "type": "TRANSCRIBE_RESPONSE",
+  "data": {
+    "transcription": "Now, do it."
+  }
+},
+{
+  "timestamp": "2025-03-01T18:50:39.652Z",
+  "type": "INTERPRET_REQUEST",
+  "data": {
+    "text": "Now, do it."
+  }
+},
+{
+  "timestamp": "2025-03-01T18:50:49.508Z",
+  "type": "INTERPRET_RESPONSE",
+  "data": {
+    "action": {
+      "actionType": "updateIssue",
+      "parameters": {
+        "issueKey": "SCRUM-2",
+        "description": "# OVERVIEW\nCreate a feature to enable users to record and transcribe voice messages for creating Jira tickets. This functionality will streamline the ticket creation process, enhance accessibility, and improve user experience.\n\n# TECHNICAL REQUIREMENTS\n- Develop a user interface for recording voice messages using a microphone input.\n- Implement speech-to-text functionality to transcribe the recorded voice messages accurately.\n- Integrate the transcribed text into the Jira ticket creation form.\n- Ensure compatibility across different devices and browsers.\n- Utilize Web Speech API for speech recognition and transcription.\n- Store the recorded voice messages securely and the transcribed text in the database.\n- Consider privacy and data protection regulations when handling voice data.\n\n# IMPLEMENTATION DETAILS\n1. Create a button in the Jira ticket creation form to initiate voice recording.\n2. Implement logic to capture audio input from the microphone.\n3. Use the Web Speech API to convert the audio to text.\n4. Populate the Jira ticket fields with the transcribed text.\n5. Store the audio files securely and associate them with the respective Jira tickets.\n\nSample code snippet:\n\\`\\`\\`\nfunction startRecording() {\n    // Logic to start recording audio\n}\n\nfunction convertSpeechToText(audioData) {\n    // Utilize Web Speech API to transcribe audio to text\n}\n\nfunction populateTicketFields(transcribedText) {\n    // Populate Jira ticket fields with transcribed text\n}\n\\`\\`\\`\n\nPotential challenge:\n- Ensuring accurate transcription under varying audio quality conditions.\n- Solution: Implement error handling and offer users the option to edit the transcribed text.\n\n# ACCEPTANCE CRITERIA\n- Users can record voice messages within the Jira ticket creation form.\n- The recorded voice messages are accurately transcribed and populated in the ticket fields.\n- The transcribed text is editable before final submission.\n- Voice messages are securely stored and associated with the respective tickets.\n\nEdge case:\n- Handling situations where the audio quality is poor or the speech is unclear.\n\n# TESTING CONSIDERATIONS\n- Unit tests for audio recording and transcription functions.\n- Integration tests to verify the end-to-end flow of recording, transcription, and populating ticket fields.\n- Performance testing to ensure the feature does not impact the responsiveness of the Jira platform.\n\n# DEPENDENCIES & RISKS\nDependencies:\n- Integration with the Jira platform for capturing and storing voice messages.\n- Compliance with data protection laws and regulations.\n\nRisks:\n- Inaccurate transcription leading to incorrect ticket details.\n- Mitigation: Provide users with the option to review and edit transcribed text before submission."
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:50:50.007Z",
+  "type": "JIRA_ACTION_REQUEST",
+  "data": {
+    "action": {
+      "actionType": "updateIssue",
+      "parameters": {
+        "issueKey": "SCRUM-2",
+        "description": "# OVERVIEW\nCreate a feature to enable users to record and transcribe voice messages for creating Jira tickets. This functionality will streamline the ticket creation process, enhance accessibility, and improve user experience.\n\n# TECHNICAL REQUIREMENTS\n- Develop a user interface for recording voice messages using a microphone input.\n- Implement speech-to-text functionality to transcribe the recorded voice messages accurately.\n- Integrate the transcribed text into the Jira ticket creation form.\n- Ensure compatibility across different devices and browsers.\n- Utilize Web Speech API for speech recognition and transcription.\n- Store the recorded voice messages securely and the transcribed text in the database.\n- Consider privacy and data protection regulations when handling voice data.\n\n# IMPLEMENTATION DETAILS\n1. Create a button in the Jira ticket creation form to initiate voice recording.\n2. Implement logic to capture audio input from the microphone.\n3. Use the Web Speech API to convert the audio to text.\n4. Populate the Jira ticket fields with the transcribed text.\n5. Store the audio files securely and associate them with the respective Jira tickets.\n\nSample code snippet:\n\\`\\`\\`\nfunction startRecording() {\n    // Logic to start recording audio\n}\n\nfunction convertSpeechToText(audioData) {\n    // Utilize Web Speech API to transcribe audio to text\n}\n\nfunction populateTicketFields(transcribedText) {\n    // Populate Jira ticket fields with transcribed text\n}\n\\`\\`\\`\n\nPotential challenge:\n- Ensuring accurate transcription under varying audio quality conditions.\n- Solution: Implement error handling and offer users the option to edit the transcribed text.\n\n# ACCEPTANCE CRITERIA\n- Users can record voice messages within the Jira ticket creation form.\n- The recorded voice messages are accurately transcribed and populated in the ticket fields.\n- The transcribed text is editable before final submission.\n- Voice messages are securely stored and associated with the respective tickets.\n\nEdge case:\n- Handling situations where the audio quality is poor or the speech is unclear.\n\n# TESTING CONSIDERATIONS\n- Unit tests for audio recording and transcription functions.\n- Integration tests to verify the end-to-end flow of recording, transcription, and populating ticket fields.\n- Performance testing to ensure the feature does not impact the responsiveness of the Jira platform.\n\n# DEPENDENCIES & RISKS\nDependencies:\n- Integration with the Jira platform for capturing and storing voice messages.\n- Compliance with data protection laws and regulations.\n\nRisks:\n- Inaccurate transcription leading to incorrect ticket details.\n- Mitigation: Provide users with the option to review and edit transcribed text before submission."
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:50:53.666Z",
+  "type": "JIRA_ACTION_RESPONSE",
+  "data": {
+    "result": {
+      "success": true,
+      "message": "Issue SCRUM-2 updated successfully"
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:51:37.801Z",
+  "type": "TRANSCRIBE_REQUEST",
+  "data": {
+    "fileSize": 246042,
+    "mimeType": "audio/wav"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:51:38.961Z",
+  "type": "TRANSCRIBE_RESPONSE",
+  "data": {
+    "transcription": "okay it seems that this ticket is a big one so convert it to epic and split it to smaller tickets"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:51:38.971Z",
+  "type": "INTERPRET_REQUEST",
+  "data": {
+    "text": "okay it seems that this ticket is a big one so convert it to epic and split it to smaller tickets"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:51:46.740Z",
+  "type": "INTERPRET_RESPONSE",
+  "data": {
+    "action": {
+      "actionType": "error",
+      "parameters": {
+        "message": "To convert the existing ticket \"SCRUM-2\" into an Epic and split it into smaller, more manageable sub-tasks, we can follow these steps:\n\n1. Create an Epic for the overarching feature of enabling users to record and transcribe voice messages for creating Jira tickets.\n2. Break down the Epic into smaller user stories or technical tasks that can be implemented individually.\n\nHere is the plan to convert and split the ticket:\n\n1. **Create Epic:**\n   - **Epic Name:** Voice Message Recording and Transcription Feature\n\n2. **Split into User Stories:**\n   - **User Story 1: Implement Voice Recording UI**\n     - **Acceptance Criteria:**\n       - Users can initiate voice recording within the Jira ticket creation form.\n       - Implement a button to start and stop recording.\n     - **Technical Details:**\n       - Develop a UI component for recording audio input.\n       - Integrate microphone access for capturing voice messages.\n\n   - **User Story 2: Speech-to-Text Transcription**\n     - **Acceptance Criteria:**\n       - Recorded voice messages are accurately transcribed.\n       - Transcribed text is populated in the ticket fields.\n     - **Technical Details:**\n       - Utilize Web Speech API for speech recognition.\n       - Implement logic to convert audio to text.\n\n   - **User Story 3: Integration with Jira Platform**\n     - **Acceptance Criteria:**\n       - Transcribed text is integrated into the Jira ticket creation form.\n       - Voice messages are securely stored and associated with tickets.\n     - **Technical Details:**\n       - Integrate transcribed text with Jira ticket fields.\n       - Store audio files securely in the database.\n\n3. **Create Sub-Tasks:**\n   - **Sub-Task 1: Set up Web Speech API**\n   - **Sub-Task 2: Implement Audio Recording Logic**\n   - **Sub-Task 3: Develop UI Components for Voice Recording**\n\nBy breaking down the Epic into smaller user stories and sub-tasks, the development process can be more organized and manageable. Each task can be assigned to different team members for parallel development."
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:51:52.150Z",
+  "type": "JIRA_ACTION_REQUEST",
+  "data": {
+    "action": {
+      "actionType": "error",
+      "parameters": {
+        "message": "To convert the existing ticket \"SCRUM-2\" into an Epic and split it into smaller, more manageable sub-tasks, we can follow these steps:\n\n1. Create an Epic for the overarching feature of enabling users to record and transcribe voice messages for creating Jira tickets.\n2. Break down the Epic into smaller user stories or technical tasks that can be implemented individually.\n\nHere is the plan to convert and split the ticket:\n\n1. **Create Epic:**\n   - **Epic Name:** Voice Message Recording and Transcription Feature\n\n2. **Split into User Stories:**\n   - **User Story 1: Implement Voice Recording UI**\n     - **Acceptance Criteria:**\n       - Users can initiate voice recording within the Jira ticket creation form.\n       - Implement a button to start and stop recording.\n     - **Technical Details:**\n       - Develop a UI component for recording audio input.\n       - Integrate microphone access for capturing voice messages.\n\n   - **User Story 2: Speech-to-Text Transcription**\n     - **Acceptance Criteria:**\n       - Recorded voice messages are accurately transcribed.\n       - Transcribed text is populated in the ticket fields.\n     - **Technical Details:**\n       - Utilize Web Speech API for speech recognition.\n       - Implement logic to convert audio to text.\n\n   - **User Story 3: Integration with Jira Platform**\n     - **Acceptance Criteria:**\n       - Transcribed text is integrated into the Jira ticket creation form.\n       - Voice messages are securely stored and associated with tickets.\n     - **Technical Details:**\n       - Integrate transcribed text with Jira ticket fields.\n       - Store audio files securely in the database.\n\n3. **Create Sub-Tasks:**\n   - **Sub-Task 1: Set up Web Speech API**\n   - **Sub-Task 2: Implement Audio Recording Logic**\n   - **Sub-Task 3: Develop UI Components for Voice Recording**\n\nBy breaking down the Epic into smaller user stories and sub-tasks, the development process can be more organized and manageable. Each task can be assigned to different team members for parallel development."
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:51:52.626Z",
+  "type": "JIRA_ACTION_ERROR_RESPONSE",
+  "data": {
+    "response": {
+      "success": false,
+      "message": "To convert the existing ticket \"SCRUM-2\" into an Epic and split it into smaller, more manageable sub-tasks, we can follow these steps:\n\n1. Create an Epic for the overarching feature of enabling users to record and transcribe voice messages for creating Jira tickets.\n2. Break down the Epic into smaller user stories or technical tasks that can be implemented individually.\n\nHere is the plan to convert and split the ticket:\n\n1. **Create Epic:**\n   - **Epic Name:** Voice Message Recording and Transcription Feature\n\n2. **Split into User Stories:**\n   - **User Story 1: Implement Voice Recording UI**\n     - **Acceptance Criteria:**\n       - Users can initiate voice recording within the Jira ticket creation form.\n       - Implement a button to start and stop recording.\n     - **Technical Details:**\n       - Develop a UI component for recording audio input.\n       - Integrate microphone access for capturing voice messages.\n\n   - **User Story 2: Speech-to-Text Transcription**\n     - **Acceptance Criteria:**\n       - Recorded voice messages are accurately transcribed.\n       - Transcribed text is populated in the ticket fields.\n     - **Technical Details:**\n       - Utilize Web Speech API for speech recognition.\n       - Implement logic to convert audio to text.\n\n   - **User Story 3: Integration with Jira Platform**\n     - **Acceptance Criteria:**\n       - Transcribed text is integrated into the Jira ticket creation form.\n       - Voice messages are securely stored and associated with tickets.\n     - **Technical Details:**\n       - Integrate transcribed text with Jira ticket fields.\n       - Store audio files securely in the database.\n\n3. **Create Sub-Tasks:**\n   - **Sub-Task 1: Set up Web Speech API**\n   - **Sub-Task 2: Implement Audio Recording Logic**\n   - **Sub-Task 3: Develop UI Components for Voice Recording**\n\nBy breaking down the Epic into smaller user stories and sub-tasks, the development process can be more organized and manageable. Each task can be assigned to different team members for parallel development.",
+      "isError": true
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T18:52:22.782Z",
+  "type": "TRANSCRIBE_REQUEST",
+  "data": {
+    "fileSize": 32291,
+    "mimeType": "audio/wav"
+  }
+},
+{
+  "timestamp": "2025-03-01T18:52:24.598Z",
+  "type": "TRANSCRIBE_RESPONSE",
+  "data": {
+    "transcription": "Okay, please do it."
+  }
+},
+{
+  "timestamp": "2025-03-01T18:52:24.605Z",
+  "type": "INTERPRET_REQUEST",
+  "data": {
+    "text": "Okay, please do it."
+  }
+},
+{
+  "timestamp": "2025-03-01T18:52:54.336Z",
+  "type": "INTERPRET_ERROR",
+  "data": {
+    "error": "Failed to interpret voice command",
+    "stack": "Error: Failed to interpret voice command\n    at Object.interpretCommand (/Users/mateuszadamczyk/Documents/Private/doit-jira/src/openaiService.js:560:15)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async /Users/mateuszadamczyk/Documents/Private/doit-jira/src/app.js:91:24"
+  }
+},
+{
+  "timestamp": "2025-03-01T19:00:07.498Z",
+  "type": "TRANSCRIBE_REQUEST",
+  "data": {
+    "fileSize": 270323,
+    "mimeType": "audio/wav"
+  }
+},
+{
+  "timestamp": "2025-03-01T19:00:09.351Z",
+  "type": "TRANSCRIBE_RESPONSE",
+  "data": {
+    "transcription": "In scrum project, get the scrum to ticket and make it an epic and split into small tickets."
+  }
+},
+{
+  "timestamp": "2025-03-01T19:00:09.376Z",
+  "type": "INTERPRET_REQUEST",
+  "data": {
+    "text": "In scrum project, get the scrum to ticket and make it an epic and split into small tickets."
+  }
+},
+{
+  "timestamp": "2025-03-01T19:00:19.685Z",
+  "type": "INTERPRET_ERROR",
+  "data": {
+    "error": "Failed to interpret voice command",
+    "stack": "Error: Failed to interpret voice command\n    at Object.interpretCommand (/Users/mateuszadamczyk/Documents/Private/doit-jira/src/openaiService.js:631:15)\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n    at async /Users/mateuszadamczyk/Documents/Private/doit-jira/src/app.js:102:24"
+  }
+},
+{
+  "timestamp": "2025-03-01T19:04:33.864Z",
+  "type": "TRANSCRIBE_REQUEST",
+  "data": {
+    "fileSize": 127563,
+    "mimeType": "audio/wav"
+  }
+},
+{
+  "timestamp": "2025-03-01T19:04:35.096Z",
+  "type": "TRANSCRIBE_RESPONSE",
+  "data": {
+    "transcription": "check the project and try to repeat the actions because it failed"
+  }
+},
+{
+  "timestamp": "2025-03-01T19:04:35.116Z",
+  "type": "INTERPRET_REQUEST",
+  "data": {
+    "text": "check the project and try to repeat the actions because it failed"
+  }
+},
+{
+  "timestamp": "2025-03-01T19:04:35.122Z",
+  "type": "INTERPRET_ERROR",
+  "data": {
+    "error": "Failed to interpret voice command",
+    "stack": "Error: Failed to interpret voice command\n    at Object.interpretCommand (/Users/mateuszadamczyk/Documents/Private/doit-jira/src/openaiService.js:674:15)\n    at /Users/mateuszadamczyk/Documents/Private/doit-jira/src/app.js:102:44\n    at Layer.handle [as handle_request] (/Users/mateuszadamczyk/Documents/Private/doit-jira/node_modules/express/lib/router/layer.js:95:5)\n    at next (/Users/mateuszadamczyk/Documents/Private/doit-jira/node_modules/express/lib/router/route.js:149:13)\n    at Route.dispatch (/Users/mateuszadamczyk/Documents/Private/doit-jira/node_modules/express/lib/router/route.js:119:3)\n    at Layer.handle [as handle_request] (/Users/mateuszadamczyk/Documents/Private/doit-jira/node_modules/express/lib/router/layer.js:95:5)\n    at /Users/mateuszadamczyk/Documents/Private/doit-jira/node_modules/express/lib/router/index.js:284:15\n    at Function.process_params (/Users/mateuszadamczyk/Documents/Private/doit-jira/node_modules/express/lib/router/index.js:346:12)\n    at next (/Users/mateuszadamczyk/Documents/Private/doit-jira/node_modules/express/lib/router/index.js:280:10)\n    at serveStatic (/Users/mateuszadamczyk/Documents/Private/doit-jira/node_modules/serve-static/index.js:75:16)"
+  }
+},
+{
+  "timestamp": "2025-03-01T19:06:07.429Z",
+  "type": "TRANSCRIBE_REQUEST",
+  "data": {
+    "fileSize": 53762,
+    "mimeType": "audio/wav"
+  }
+},
+{
+  "timestamp": "2025-03-01T19:06:08.669Z",
+  "type": "TRANSCRIBE_RESPONSE",
+  "data": {
+    "transcription": "I'll try to do it again, because it failed."
+  }
+},
+{
+  "timestamp": "2025-03-01T19:06:08.699Z",
+  "type": "INTERPRET_REQUEST",
+  "data": {
+    "text": "I'll try to do it again, because it failed."
+  }
+},
+{
+  "timestamp": "2025-03-01T19:06:09.155Z",
+  "type": "INTERPRET_RESPONSE",
+  "data": {
+    "action": {
+      "actionType": "storeContext",
+      "parameters": {
+        "context": "I'll try to do it again, because it failed."
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T19:06:09.160Z",
+  "type": "JIRA_ACTION_REQUEST",
+  "data": {
+    "action": {
+      "actionType": "storeContext",
+      "parameters": {
+        "context": "I'll try to do it again, because it failed."
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T19:06:09.161Z",
+  "type": "JIRA_ACTION_CONTEXT",
+  "data": {
+    "response": {
+      "success": true,
+      "message": "Context stored for future reference.",
+      "isContextOnly": true
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T19:06:30.154Z",
+  "type": "TRANSCRIBE_REQUEST",
+  "data": {
+    "fileSize": 29417,
+    "mimeType": "audio/wav"
+  }
+},
+{
+  "timestamp": "2025-03-01T19:06:31.278Z",
+  "type": "TRANSCRIBE_RESPONSE",
+  "data": {
+    "transcription": "Make it again."
+  }
+},
+{
+  "timestamp": "2025-03-01T19:06:31.286Z",
+  "type": "INTERPRET_REQUEST",
+  "data": {
+    "text": "Make it again."
+  }
+},
+{
+  "timestamp": "2025-03-01T19:06:37.750Z",
+  "type": "INTERPRET_RESPONSE",
+  "data": {
+    "action": {
+      "actionType": "createIssue",
+      "parameters": {
+        "summary": "Created Epic and subtasks: SCRUM-6",
+        "result": {
+          "success": true,
+          "message": "Successfully created Epic and 0 subtasks: SCRUM-6",
+          "data": {
+            "createdIssues": [
+              "SCRUM-6"
+            ]
+          }
+        }
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T19:06:38.127Z",
+  "type": "JIRA_ACTION_REQUEST",
+  "data": {
+    "action": {
+      "actionType": "createIssue",
+      "parameters": {
+        "summary": "Created Epic and subtasks: SCRUM-6",
+        "result": {
+          "success": true,
+          "message": "Successfully created Epic and 0 subtasks: SCRUM-6",
+          "data": {
+            "createdIssues": [
+              "SCRUM-6"
+            ]
+          }
+        }
+      }
+    }
+  }
+},
+{
+  "timestamp": "2025-03-01T19:06:38.130Z",
+  "type": "JIRA_ACTION_RESPONSE",
+  "data": {
+    "result": {
+      "success": true,
+      "message": "Successfully created Epic and 0 subtasks: SCRUM-6",
+      "data": {
+        "createdIssues": [
+          "SCRUM-6"
+        ]
+      }
+    }
+  }
+},

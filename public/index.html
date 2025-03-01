@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice-Controlled Jira Assistant</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Voice-Controlled Jira Assistant</h1>
+        </header>
+        
+        <div class="chat-controls">
+            <button id="newChatButton" class="control-btn">New Chat</button>
+            <button id="clearChatButton" class="control-btn">Clear Chat</button>
+        </div>
+        
+        <div class="chat-container">
+            <h2>Chat History</h2>
+            <div id="chatMessages" class="chat-messages">
+                <div class="empty-chat-message">No messages yet. Start by recording a voice command.</div>
+            </div>
+        </div>
+        
+        <main>
+            <div class="voice-recorder">
+                <button id="recordButton" class="record-btn">
+                    <span class="record-icon"></span>
+                    <span class="record-text">Start Recording</span>
+                </button>
+                <div id="recordingStatus" class="recording-status">Not recording</div>
+                <div id="recordingTime" class="recording-time">00:00</div>
+            </div>
+            
+            <div class="transcription-container">
+                <h2>Transcription</h2>
+                <div id="transcriptionText" class="transcription-text">Your transcribed voice will appear here...</div>
+            </div>
+            
+            <div class="action-container">
+                <h2>Jira Action</h2>
+                <div id="actionText" class="action-text">The interpreted action will appear here...</div>
+            </div>
+            
+            <div class="result-container">
+                <h2>Result</h2>
+                <div id="resultText" class="result-text">The result of the action will appear here...</div>
+            </div>
+        </main>
+        
+        <footer>
+            <p>Voice-Controlled Jira Assistant &copy; 2023</p>
+        </footer>
+    </div>
+
+    <script src="voiceRecorder.js"></script>
+</body>
+</html> 
