@@ -51,7 +51,7 @@ export const actionHandlers: ActionHandler[] = [
   {
     actionType: 'deleteIssue',
     handler: async (action: Action, services: any): Promise<ActionResult> => {
-      const deleteResult = await services.jiraService.deleteIssue(action.parameters.issueKey);
+      const deleteResult = await services.jiraService.deleteIssue(action.parameters);
       return {
         success: deleteResult.success,
         message: deleteResult.message

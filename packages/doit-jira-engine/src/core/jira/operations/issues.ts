@@ -122,7 +122,7 @@ export function configureIssueOperations(client: JiraClient) {
     };
   }
   
-  async function deleteIssue(issueKey: string): Promise<OperationResult> {
+  async function deleteIssue({ issueKey }: { issueKey: string }): Promise<OperationResult> {
     try {
       logger.info(`Deleting issue: ${issueKey}`);
       
