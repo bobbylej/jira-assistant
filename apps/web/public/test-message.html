@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Message Display Test</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+    .chat-messages { 
+      border: 1px solid #ccc; 
+      padding: 10px; 
+      height: 300px; 
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+    .message {
+      margin-bottom: 10px;
+      padding: 10px;
+      border-radius: 8px;
+      max-width: 80%;
+      word-wrap: break-word;
+    }
+    .user-message {
+      background-color: #e2f0ff;
+      align-self: flex-end;
+      margin-left: auto;
+    }
+    .assistant-message {
+      background-color: #f0f0f0;
+      align-self: flex-start;
+      margin-right: auto;
+    }
+    button { padding: 10px; margin: 10px 0; }
+  </style>
+</head>
+<body>
+  <h1>Message Display Test</h1>
+  
+  <div class="chat-messages" id="chatMessages"></div>
+  
+  <button id="addUserMsg">Add User Message</button>
+  <button id="addAssistantMsg">Add Assistant Message</button>
+  <button id="addJiraMsg">Add Jira Message</button>
+  
+  <script>
+    const chatMessages = document.getElementById('chatMessages');
+    
+    document.getElementById('addUserMsg').addEventListener('click', () => {
+      addMessage('user', 'This is a test user message');
+    });
+    
+    document.getElementById('addAssistantMsg').addEventListener('click', () => {
+      addMessage('assistant', 'This is a test assistant message');
+    });
+    
+    document.getElementById('addJiraMsg').addEventListener('click', () => {
+      addMessage('assistant', 'I found 3 tickets related to recording in the SCRUM project:\nIssue Key: SCRUM-4, Summary: Implement recording voice messages functionality\nIssue Key: SCRUM-3, Summary: Develop feature to record and transcribe voice messages');
+    });
+    
+    function addMessage(role, content) {
+      console.log(`Adding message - Role: ${role}, Content: ${content.substring(0, 50)}`);
+      
+      const messageElement = document.createElement('div');
+      messageElement.classList.add('message');
+      
+      if (role === 'user') {
+        messageElement.classList.add('user-message');
+        messageElement.textContent = content;
+      } else {
+        messageElement.classList.add('assistant-message');
+        
+        if (content.includes('Issue Key:')) {
+          const formattedContent = content
+            .replace(/\n/g, '<br>')
+            .replace(/Issue Key: ([\w-]+)/g, '<span style="font-weight:bold;color:#0052cc;">$1</span>');
+          
+          messageElement.innerHTML = formattedContent;
+        } else {
+          messageElement.textContent = content;
+        }
+      }
+      
+      chatMessages.appendChild(messageElement);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+  </script>
+</body>
+</html> 

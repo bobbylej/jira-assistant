@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Audio Recording Test</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+    button { padding: 10px 20px; margin: 10px 0; }
+    .recording { background-color: red; color: white; }
+    #log { border: 1px solid #ccc; padding: 10px; height: 200px; overflow-y: auto; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>Audio Recording Test</h1>
+  <p>This page tests the basic audio recording functionality.</p>
+  
+  <button id="recordButton">Hold to Record</button>
+  <div>Status: <span id="status">Ready</span></div>
+  
+  <div id="log"></div>
+  
+  <script>
+    const recordButton = document.getElementById('recordButton');
+    const statusElement = document.getElementById('status');
+    const logElement = document.getElementById('log');
+    
+    let isRecording = false;
+    let mediaRecorder = null;
+    let audioChunks = [];
+    
+    function log(message) {
+      const entry = document.createElement('div');
+      entry.textContent = `${new Date().toISOString().substr(11, 8)} - ${message}`;
+      logElement.appendChild(entry);
+      logElement.scrollTop = logElement.scrollHeight;
+      console.log(message);
+    }
+    
+    recordButton.addEventListener('mousedown', startRecording);
+    recordButton.addEventListener('mouseup', stopRecording);
+    recordButton.addEventListener('mouseleave', stopRecording);
+    
+    async function startRecording() {
+      try {
+        log('Starting recording...');
+        statusElement.textContent = 'Requesting microphone access...';
+        
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        log('Microphone access granted');
+        
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        
+        mediaRecorder.addEventListener('dataavailable', (event) => {
+          log(`Data available: ${event.data.size} bytes`);
+          audioChunks.push(event.data);
+        });
+        
+        mediaRecorder.addEventListener('start', () => {
+          log('MediaRecorder started');
+        });
+        
+        mediaRecorder.addEventListener('error', (e) => {
+          log(`MediaRecorder error: ${e.error}`);
+        });
+        
+        mediaRecorder.start();
+        isRecording = true;
+        recordButton.classList.add('recording');
+        statusElement.textContent = 'Recording...';
+      } catch (error) {
+        log(`Error starting recording: ${error.message}`);
+        statusElement.textContent = 'Error: ' + error.message;
+      }
+    }
+    
+    async function stopRecording() {
+      if (!isRecording) return;
+      
+      log('Stopping recording...');
+      statusElement.textContent = 'Processing...';
+      
+      mediaRecorder.addEventListener('stop', () => {
+        log(`Recording stopped, collected ${audioChunks.length} chunks`);
+        
+        if (audioChunks.length > 0) {
+          const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+          log(`Created audio blob: ${audioBlob.size} bytes`);
+          
+          const audioUrl = URL.createObjectURL(audioBlob);
+          const audio = document.createElement('audio');
+          audio.src = audioUrl;
+          audio.controls = true;
+          document.body.appendChild(audio);
+          
+          statusElement.textContent = 'Done - check audio below';
+        } else {
+          log('No audio data collected');
+          statusElement.textContent = 'Error: No audio data';
+        }
+      });
+      
+      mediaRecorder.stop();
+      mediaRecorder.stream.getTracks().forEach(track => track.stop());
+      
+      isRecording = false;
+      recordButton.classList.remove('recording');
+    }
+    
+    log('Page loaded, ready to record');
+  </script>
+</body>
+</html> 
