@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DoIt Jira Assistant</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="app-container">
+    <header>
+      <h1>DoIt Jira Assistant</h1>
+    </header>
+    
+    <div class="chat-container">
+      <div class="chat-header">
+        <button id="clearChatBtn" class="clear-chat-btn">Clear Chat</button>
+      </div>
+      <div class="chat-messages" id="chatMessages"></div>
+      
+      <div id="loadingIndicator" class="loading-indicator">
+        <div class="loading-spinner"></div>
+        <span>Processing...</span>
+      </div>
+      
+      <div class="input-container">
+        <button id="recordButton" class="record-button">
+          <span class="record-icon"></span>
+        </button>
+        <input type="text" id="textInput" placeholder="Type your command...">
+        <button id="sendButton">Send</button>
+      </div>
+    </div>
+    
+    <div class="context-info" id="contextInfo">
+      <div class="context-header">Current Jira Context</div>
+      <div class="context-content" id="contextContent">Not connected to Jira</div>
+    </div>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html> 
