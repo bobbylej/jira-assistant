@@ -1,22 +1,22 @@
 {
-  "name": "voice-jira-app",
+  "name": "doit-jira",
   "version": "1.0.0",
-  "description": "Voice-controlled Jira project management application",
-  "main": "src/app.js",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "scripts": {
-    "start": "node src/app.js",
-    "dev": "nodemon src/app.js"
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "build:extension": "cd apps/chrome-extension && node build.js",
+    "lint": "turbo run lint",
+    "test": "turbo run test"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "dotenv": "^16.3.1",
-    "openai": "^4.20.0",
-    "axios": "^1.6.2",
-    "cors": "^2.8.5",
-    "multer": "^1.4.5-lts.1",
-    "uuid": "^9.0.0"
+    "turbo": "^1.10.3"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1"
+    "archiver": "^7.0.1"
   }
 }

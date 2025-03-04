@@ -1,2 +1,21 @@
+# Environment variables
 .env
+.env.local
+.env.*.local
+apps/*/.env
+packages/*/.env
 node_modules
+
+.turbo
+
+# Build outputs
+dist/
+apps/*/dist/
+
+# Logs and data
+logs/
+data/
+apps/*/logs/
+apps/*/data/
+packages/*/logs/
+packages/*/data/
