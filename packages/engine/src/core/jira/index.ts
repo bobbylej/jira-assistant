@@ -26,6 +26,7 @@ export function configureJiraService(config: JiraConfig) {
     updateIssueType: issueOperations.updateIssueType,
     updateIssuePriority: issueOperations.updateIssuePriority,
     deleteIssue: issueOperations.deleteIssue,
+    linkIssues: issueOperations.linkIssues,
     
     // Comment operations
     addComment: commentOperations.addComment,

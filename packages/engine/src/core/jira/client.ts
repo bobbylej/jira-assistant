@@ -64,15 +64,20 @@ export async function jiraRequest<T>(
       throw new Error(`Jira API error: ${response.status} ${response.statusText}${errorDetails ? ` - ${errorDetails}` : ''}`);
     }
     
-    // For DELETE requests that don't return content
-    if (method === 'DELETE' && response.status === 204) {
+    // For DELETE requests or other requests that don't return content
+    if (response.status === 204 || response.headers.get('content-length') === '0') {
       return {} as T;
     }
     
     // Parse and return the response
-    const responseData = await response.json() as T;
-    logger.debug(`Response: ${JSON.stringify(responseData)}`);
-    return responseData;
+    try {
+      const responseData = await response.json() as T;
+      logger.debug(`Response: ${JSON.stringify(responseData)}`);
+      return responseData;
+    } catch (parseError) {
+      logger.warn(`Could not parse response as JSON: ${parseError}`);
+      return {} as T;
+    }
   } catch (error: unknown) {
     logger.error(`Error in Jira API request: ${endpoint}`, error);
     const errorMessage = error instanceof Error ? error.message : String(error);

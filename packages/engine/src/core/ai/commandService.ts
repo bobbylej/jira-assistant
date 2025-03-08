@@ -150,9 +150,13 @@ export function configureCommandService(openai: OpenAI, jiraService: any) {
             content: "You are a Jira assistant that helps users manage their Jira projects and issues. " +
                      "Your goal is to understand the user's request in the context of their current Jira environment " +
                      "and take appropriate actions. When the user provides a request, analyze the Jira context " +
-                     "information to determine the most helpful response. Always prefer using the available " +
-                     "tools to perform actions rather than just describing what could be done. Be concise but " +
-                     "thorough in your responses."
+                     "information to determine the most helpful response.\n\n" +
+                     "For complex operations that require multiple steps (like creating an epic and linking issues to it), " +
+                     "use the multi_step_operation function rather than trying to perform the steps separately. " +
+                     "When a user asks to 'put a ticket into an epic' or 'move a ticket to a story', they want to " +
+                     "establish a parent-child relationship between the issues.\n\n" +
+                     "Always prefer using the available tools to perform actions rather than just describing what could be done. " +
+                     "Be concise but thorough in your responses."
           },
           { role: "user", content: enhancedPrompt }
         ],
@@ -233,6 +237,16 @@ export function configureCommandService(openai: OpenAI, jiraService: any) {
               actionType: 'updateIssuePriority',
               parameters: args
             };
+          case 'link_issues':
+            return {
+              actionType: 'linkIssues',
+              parameters: args
+            };
+          case 'multi_step_operation':
+            return {
+              actionType: 'multiStepOperation',
+              parameters: args
+            };
           default:
             return {
               actionType: 'message',
@@ -256,7 +270,7 @@ export function configureCommandService(openai: OpenAI, jiraService: any) {
     }
   }
   
-  async function executeAction(action: any) {
+  async function executeAction(action: any, context?: JiraContext) {
     try {
       logger.info('Executing action:', action);
       
@@ -356,6 +370,16 @@ export function configureCommandService(openai: OpenAI, jiraService: any) {
             message: `Successfully updated priority for issue ${action.parameters.issueKey} to ${action.parameters.priority}`
           };
           
+        case 'linkIssues':
+          await jiraService.linkIssues(action.parameters);
+          return {
+            success: true,
+            message: `Successfully linked issue ${action.parameters.sourceIssueKey} to ${action.parameters.targetIssueKey} with link type "${action.parameters.linkType}"`
+          };
+          
+        case 'multiStepOperation':
+          return await executeMultiStepOperation(action.parameters, context);
+          
         case 'message':
           return {
             success: true,
@@ -375,6 +399,98 @@ export function configureCommandService(openai: OpenAI, jiraService: any) {
         success: false,
         message: `Error executing action: ${errorMessage}`
       };
+    }
+  }
+  
+  async function executeMultiStepOperation(params: any, context?: JiraContext) {
+    const { operationType, parameters } = params;
+    
+    switch (operationType) {
+      case 'create_epic_and_link':
+        try {
+          // Step 1: Create the epic
+          logger.info(`Creating epic "${parameters.epicSummary}" in project ${parameters.projectKey}`);
+          const epicResult = await jiraService.createIssue({
+            projectKey: parameters.projectKey,
+            summary: parameters.epicSummary,
+            description: parameters.epicDescription,
+            issueType: 'Epic'
+          });
+          
+          // Step 2: Link the issue to the epic if specified
+          if (parameters.issueKey) {
+            try {
+              logger.info(`Linking issue ${parameters.issueKey} to new epic ${epicResult.key}`);
+              
+              // Wait a moment to ensure the epic is fully created in Jira
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              
+              await jiraService.linkIssues({
+                sourceIssueKey: parameters.issueKey,
+                targetIssueKey: epicResult.key,
+                linkType: 'is part of'
+              });
+              
+              return {
+                success: true,
+                message: `Successfully created epic ${epicResult.key} "${parameters.epicSummary}" and linked issue ${parameters.issueKey} to it`
+              };
+            } catch (linkError: any) {
+              // If linking fails, still return success for the epic creation
+              logger.error(`Failed to link issue to epic: ${linkError}`);
+              
+              // Add a comment to the issue mentioning the epic
+              try {
+                await jiraService.addComment({
+                  issueKey: parameters.issueKey,
+                  comment: `This issue should be part of Epic ${epicResult.key}. Automatic linking failed.`
+                });
+              } catch (commentError) {
+                logger.error(`Failed to add comment: ${commentError}`);
+              }
+              
+              return {
+                success: true,
+                message: `Created epic ${epicResult.key} "${parameters.epicSummary}" but failed to link issue ${parameters.issueKey} to it. A reference comment was added instead.`
+              };
+            }
+          } else {
+            return {
+              success: true,
+              message: `Successfully created epic ${epicResult.key} "${parameters.epicSummary}"`
+            };
+          }
+        } catch (error) {
+          logger.error('Error in create_epic_and_link operation:', error);
+          throw error;
+        }
+        
+      case 'move_to_epic':
+        try {
+          // Link an existing issue to an existing epic
+          logger.info(`Linking issue ${parameters.issueKey} to epic ${parameters.targetEpicKey}`);
+          await jiraService.linkIssues({
+            sourceIssueKey: parameters.issueKey,
+            targetIssueKey: parameters.targetEpicKey,
+            linkType: 'is part of'  // Changed from 'parent' to 'is part of'
+          });
+          
+          return {
+            success: true,
+            message: `Successfully linked issue ${parameters.issueKey} to epic ${parameters.targetEpicKey}`
+          };
+        } catch (error) {
+          logger.error('Error in move_to_epic operation:', error);
+          throw error;
+        }
+        
+      // Add other multi-step operations as needed
+        
+      default:
+        return {
+          success: false,
+          message: `Unknown multi-step operation type: ${operationType}`
+        };
     }
   }
   

@@ -112,6 +112,7 @@ export function configureEngine(config: EngineConfig) {
     transitionIssue: jiraService.transitionIssue,
     getProjectUsers: jiraService.getProjectUsers,
     updateIssuePriority: jiraService.updateIssuePriority,
+    linkIssues: jiraService.linkIssues,
     
     // Utilities
     logToFile: logger.logToFile

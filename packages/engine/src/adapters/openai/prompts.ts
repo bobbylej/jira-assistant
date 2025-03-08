@@ -233,4 +233,74 @@ export const JIRA_TOOLS: ChatCompletionTool[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "link_issues",
+      description: "Link two Jira issues together with a specific relationship type",
+      parameters: {
+        type: "object",
+        properties: {
+          sourceIssueKey: {
+            type: "string",
+            description: "The key of the source issue (e.g., PROJ-123)"
+          },
+          targetIssueKey: {
+            type: "string",
+            description: "The key of the target issue (e.g., PROJ-456)"
+          },
+          linkType: {
+            type: "string",
+            description: "The type of link between issues (e.g., 'relates to', 'blocks', 'is blocked by', 'is part of', etc.)",
+            default: "relates to"
+          }
+        },
+        required: ["sourceIssueKey", "targetIssueKey"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "multi_step_operation",
+      description: "Perform a sequence of related Jira operations as a single transaction",
+      parameters: {
+        type: "object",
+        properties: {
+          operationType: {
+            type: "string",
+            description: "The type of multi-step operation to perform",
+            enum: ["create_epic_and_link", "create_and_link_subtasks", "move_to_epic"]
+          },
+          parameters: {
+            type: "object",
+            description: "Parameters specific to the operation type",
+            properties: {
+              projectKey: {
+                type: "string",
+                description: "The project key (e.g., PROJ)"
+              },
+              epicSummary: {
+                type: "string",
+                description: "Summary for the new epic"
+              },
+              epicDescription: {
+                type: "string",
+                description: "Description for the new epic"
+              },
+              issueKey: {
+                type: "string",
+                description: "The issue key to link to the epic (e.g., PROJ-123)"
+              },
+              targetEpicKey: {
+                type: "string",
+                description: "The key of an existing epic to link issues to"
+              }
+            }
+          }
+        },
+        required: ["operationType", "parameters"]
+      }
+    }
+  }
 ];
