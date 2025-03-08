@@ -1,6 +1,7 @@
 export interface JiraClient {
   baseUrl: string;
   auth: string;
+  email: string;
 }
 
 export interface JiraIssue {

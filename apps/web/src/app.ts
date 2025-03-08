@@ -38,6 +38,11 @@ if (!fs.existsSync(logsDir)) {
   fs.mkdirSync(logsDir, { recursive: true });
 }
 
+console.log('OPENAI_API_KEY', process.env.OPENAI_API_KEY);
+console.log('JIRA_BASE_URL', process.env.JIRA_BASE_URL);
+console.log('JIRA_EMAIL', process.env.JIRA_EMAIL);
+console.log('JIRA_API_TOKEN', process.env.JIRA_API_TOKEN);
+
 // Configure the engine
 const engine = configureEngine({
   openaiApiKey: process.env.OPENAI_API_KEY || '',
@@ -86,14 +91,18 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
 // Interpret command
 app.post('/api/interpret', async (req, res) => {
   try {
-    const { text } = req.body;
+    const { text, context } = req.body;
     
     if (!text) {
       return res.status(400).json({ error: 'No text provided' });
     }
     
     console.log('Interpreting command:', text);
-    const action = await engine.interpretCommand(text);
+    if (context) {
+      console.log('With context:', JSON.stringify(context).substring(0, 200) + '...');
+    }
+    
+    const action = await engine.interpretCommand(text, context);
     console.log('Interpretation result:', action);
     
     // Log the response we're sending back
@@ -128,11 +137,47 @@ app.post('/api/execute', async (req, res) => {
       return res.status(400).json({ error: 'No action provided' });
     }
     
-    const result = await engine.executeAction(action);
-    res.json({ result });
+    console.log('[INFO] Executing action:', action);
+    
+    try {
+      const result = await engine.executeAction(action);
+      return res.json({ result });
+    } catch (error: any) {
+      console.error('[ERROR] Error executing action:', error);
+      
+      // Format the error response
+      let errorMessage = error.message || 'Unknown error';
+      let statusCode = 500;
+      
+      // Check for specific error types
+      if (errorMessage.includes('401 Unauthorized')) {
+        errorMessage = 'Authentication failed. Please check your Jira API token and credentials.';
+        statusCode = 401;
+      } else if (errorMessage.includes('403 Forbidden')) {
+        errorMessage = 'You do not have permission to perform this action in Jira.';
+        statusCode = 403;
+      } else if (errorMessage.includes('404 Not Found')) {
+        errorMessage = 'The requested Jira resource was not found.';
+        statusCode = 404;
+      }
+      
+      return res.status(statusCode).json({ 
+        error: errorMessage,
+        actionType: 'error',
+        parameters: {
+          message: `I encountered an error while trying to execute that action: ${errorMessage}`
+        }
+      });
+    }
   } catch (error: any) {
-    console.error('Error executing action:', error);
-    res.status(500).json({ error: 'Failed to execute action' });
+    console.error('[ERROR] Unexpected error in execute endpoint:', error);
+    return res.status(500).json({ 
+      error: error.message || 'Unexpected error',
+      actionType: 'error',
+      parameters: {
+        message: 'Sorry, I encountered an unexpected error. Please try again.'
+      }
+    });
   }
 });
 

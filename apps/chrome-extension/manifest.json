@@ -22,8 +22,7 @@
     "scripting"
   ],
   "host_permissions": [
-    "*://*.atlassian.net/*",
-    "http://localhost:3000/*"
+    "*://*.atlassian.net/*"
   ],
   "background": {
     "service_worker": "background/background.js"
