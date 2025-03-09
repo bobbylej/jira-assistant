@@ -27,43 +27,265 @@ export function configureIssueOperations(client: JiraClient) {
     projectKey, 
     summary, 
     description, 
-    issueType 
+    issueType = 'Task',
+    priority,
+    assignee
   }: { 
     projectKey: string; 
     summary: string; 
     description?: string; 
-    issueType: string 
+    issueType?: string;
+    priority?: string;
+    assignee?: string;
   }): Promise<JiraIssue> {
     logger.info(`Creating issue in project ${projectKey}: ${summary}`);
     
-    const issueData = {
+    // Format the description (it's already been enhanced by the AI if needed)
+    const formattedDescription = description ? formatDescription(description, issueType) : generateDefaultDescription(issueType, summary);
+    
+    const issueData: any = {
       fields: {
         project: {
           key: projectKey
         },
-        summary,
-        description: description ? {
-          type: "doc",
-          version: 1,
-          content: [
-            {
-              type: "paragraph",
-              content: [
-                {
-                  type: "text",
-                  text: description
-                }
-              ]
-            }
-          ]
-        } : undefined,
+        summary: summary,
         issuetype: {
           name: issueType
         }
       }
     };
     
-    return jiraRequest<JiraIssue>(client, '/rest/api/3/issue', 'POST', issueData);
+    // Add description if provided
+    if (formattedDescription) {
+      issueData.fields.description = formattedDescription;
+    }
+    
+    // Add priority if provided
+    if (priority) {
+      issueData.fields.priority = {
+        name: priority
+      };
+    }
+    
+    // Add assignee if provided
+    if (assignee) {
+      issueData.fields.assignee = {
+        id: assignee
+      };
+    }
+    
+    const response = await jiraRequest<{ id: string; key: string; self: string }>(
+      client,
+      '/rest/api/3/issue',
+      'POST',
+      issueData
+    );
+    
+    // Get the full issue details
+    return await getIssue({ issueKey: response.key });
+  }
+  
+  /**
+   * Formats a description into Jira's Atlassian Document Format
+   */
+  function formatDescription(description: string, issueType: string): any {
+    // If the description is already in ADF format, return it as is
+    if (typeof description === 'object') {
+      return description;
+    }
+    
+    // Create a basic ADF document
+    const adfDoc = {
+      type: "doc",
+      version: 1,
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: description
+            }
+          ]
+        }
+      ]
+    };
+    
+    return adfDoc;
+  }
+  
+  /**
+   * Generates a default description template based on issue type
+   */
+  function generateDefaultDescription(issueType: string, summary: string): any {
+    let template: any = {
+      type: "doc",
+      version: 1,
+      content: []
+    };
+    
+    // Add a heading
+    template.content.push({
+      type: "heading",
+      attrs: { level: 2 },
+      content: [{ type: "text", text: summary }]
+    });
+    
+    // Add different sections based on issue type
+    switch (issueType.toLowerCase()) {
+      case 'epic':
+        template.content.push(
+          {
+            type: "heading",
+            attrs: { level: 3 },
+            content: [{ type: "text", text: "Epic Overview" }]
+          },
+          {
+            type: "paragraph",
+            content: [{ type: "text", text: "This epic covers..." }]
+          },
+          {
+            type: "heading",
+            attrs: { level: 3 },
+            content: [{ type: "text", text: "Goals" }]
+          },
+          {
+            type: "bulletList",
+            content: [
+              {
+                type: "listItem",
+                content: [{ type: "paragraph", content: [{ type: "text", text: "Goal 1" }] }]
+              },
+              {
+                type: "listItem",
+                content: [{ type: "paragraph", content: [{ type: "text", text: "Goal 2" }] }]
+              }
+            ]
+          },
+          {
+            type: "heading",
+            attrs: { level: 3 },
+            content: [{ type: "text", text: "Success Criteria" }]
+          },
+          {
+            type: "paragraph",
+            content: [{ type: "text", text: "This epic will be considered successful when..." }]
+          }
+        );
+        break;
+        
+      case 'story':
+        template.content.push(
+          {
+            type: "heading",
+            attrs: { level: 3 },
+            content: [{ type: "text", text: "User Story" }]
+          },
+          {
+            type: "paragraph",
+            content: [{ type: "text", text: "As a [type of user], I want [goal] so that [benefit]." }]
+          },
+          {
+            type: "heading",
+            attrs: { level: 3 },
+            content: [{ type: "text", text: "Acceptance Criteria" }]
+          },
+          {
+            type: "bulletList",
+            content: [
+              {
+                type: "listItem",
+                content: [{ type: "paragraph", content: [{ type: "text", text: "Criterion 1" }] }]
+              },
+              {
+                type: "listItem",
+                content: [{ type: "paragraph", content: [{ type: "text", text: "Criterion 2" }] }]
+              }
+            ]
+          }
+        );
+        break;
+        
+      case 'bug':
+        template.content.push(
+          {
+            type: "heading",
+            attrs: { level: 3 },
+            content: [{ type: "text", text: "Description" }]
+          },
+          {
+            type: "paragraph",
+            content: [{ type: "text", text: "Describe the bug here..." }]
+          },
+          {
+            type: "heading",
+            attrs: { level: 3 },
+            content: [{ type: "text", text: "Steps to Reproduce" }]
+          },
+          {
+            type: "orderedList",
+            content: [
+              {
+                type: "listItem",
+                content: [{ type: "paragraph", content: [{ type: "text", text: "Step 1" }] }]
+              },
+              {
+                type: "listItem",
+                content: [{ type: "paragraph", content: [{ type: "text", text: "Step 2" }] }]
+              }
+            ]
+          },
+          {
+            type: "heading",
+            attrs: { level: 3 },
+            content: [{ type: "text", text: "Expected Behavior" }]
+          },
+          {
+            type: "paragraph",
+            content: [{ type: "text", text: "What should happen..." }]
+          },
+          {
+            type: "heading",
+            attrs: { level: 3 },
+            content: [{ type: "text", text: "Actual Behavior" }]
+          },
+          {
+            type: "paragraph",
+            content: [{ type: "text", text: "What actually happens..." }]
+          }
+        );
+        break;
+        
+      default: // Task or any other type
+        template.content.push(
+          {
+            type: "heading",
+            attrs: { level: 3 },
+            content: [{ type: "text", text: "Description" }]
+          },
+          {
+            type: "paragraph",
+            content: [{ type: "text", text: "Describe the task here..." }]
+          },
+          {
+            type: "heading",
+            attrs: { level: 3 },
+            content: [{ type: "text", text: "Acceptance Criteria" }]
+          },
+          {
+            type: "bulletList",
+            content: [
+              {
+                type: "listItem",
+                content: [{ type: "paragraph", content: [{ type: "text", text: "Criterion 1" }] }]
+              }
+            ]
+          }
+        );
+        break;
+    }
+    
+    return template;
   }
   
   async function updateIssueType({ 
@@ -226,15 +448,11 @@ export function configureIssueOperations(client: JiraClient) {
       
       logger.info(`Creating standard issue link with type "${mappedLinkType}"`);
       
-      // Create a standard issue link
-      const response = await fetch(`${client.baseUrl}/rest/api/3/issueLink`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Basic ${client.auth}`,
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
+      await jiraRequest(
+        client,
+        '/rest/api/3/issueLink',
+        'POST',
+        {
           type: {
             name: mappedLinkType
           },
@@ -244,32 +462,8 @@ export function configureIssueOperations(client: JiraClient) {
           outwardIssue: {
             key: sourceIssueKey
           }
-        })
-      });
-      
-      if (!response.ok) {
-        let errorMessage = `${response.status} ${response.statusText}`;
-        try {
-          const errorData = await response.json();
-          errorMessage += ` - ${JSON.stringify(errorData)}`;
-        } catch (e) {
-          // If we can't parse the response as JSON, just use the status text
         }
-        
-        throw new Error(`Jira API error: ${errorMessage}`);
-      }
-      
-      // For 204 No Content responses
-      if (response.status === 204) {
-        return { 
-          success: true, 
-          message: `Successfully linked issue ${sourceIssueKey} to ${targetIssueKey}` 
-        };
-      }
-      
-      // For responses with content
-      const responseData = await response.json();
-      logger.debug(`Response: ${JSON.stringify(responseData)}`);
+      );
       
       return { 
         success: true, 
@@ -316,6 +510,93 @@ export function configureIssueOperations(client: JiraClient) {
     }
   }
   
+  async function updateIssue({ 
+    issueKey, 
+    summary,
+    description,
+    issueType,
+    priority,
+    assignee
+  }: { 
+    issueKey: string;
+    summary?: string;
+    description?: string;
+    issueType?: string;
+    priority?: string;
+    assignee?: string;
+  }): Promise<OperationResult> {
+    logger.info(`Updating issue ${issueKey}`);
+    
+    // Prepare the fields to update
+    const fields: any = {};
+    
+    // Only get the current issue if we need to format the description
+    if (description) {
+      // Get the current issue to determine its type for description formatting
+      let currentIssueType = '';
+      try {
+        const currentIssue = await getIssue({ issueKey });
+        currentIssueType = currentIssue.fields.issuetype.name;
+      } catch (error) {
+        logger.warn(`Could not get current issue type for ${issueKey}:`, error);
+      }
+      
+      // Format the description with the appropriate issue type
+      fields.description = formatDescription(description, currentIssueType || issueType || '');
+    }
+    
+    // Add other fields that are provided
+    if (summary !== undefined) {
+      fields.summary = summary;
+    }
+    
+    if (issueType !== undefined) {
+      fields.issuetype = {
+        name: issueType
+      };
+    }
+    
+    if (priority !== undefined) {
+      fields.priority = {
+        name: priority
+      };
+    }
+    
+    if (assignee !== undefined) {
+      fields.assignee = {
+        id: assignee
+      };
+    }
+    
+    // Only proceed if there are fields to update
+    if (Object.keys(fields).length === 0) {
+      return {
+        success: false,
+        message: "No fields provided for update"
+      };
+    }
+    
+    // Make the update request
+    await jiraRequest(
+      client,
+      `/rest/api/3/issue/${issueKey}`,
+      'PUT',
+      { fields }
+    );
+    
+    // Build a message about what was updated
+    const updatedFields = Object.keys(fields).map(field => {
+      if (field === 'issuetype') return 'issue type';
+      return field;
+    });
+    
+    return { 
+      success: true, 
+      message: `Successfully updated ${updatedFields.join(', ')} for issue ${issueKey}` 
+    };
+  }
+  
+  // Return all the operations
   return {
     getIssue,
     searchIssues,
@@ -323,6 +604,7 @@ export function configureIssueOperations(client: JiraClient) {
     updateIssueType,
     updateIssuePriority,
     deleteIssue,
-    linkIssues
+    linkIssues,
+    updateIssue
   };
-} 
+}

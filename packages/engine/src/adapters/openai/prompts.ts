@@ -62,7 +62,7 @@ export const JIRA_TOOLS: ChatCompletionTool[] = [
           },
           description: {
             type: "string",
-            description: "Detailed description of the issue",
+            description: "Description of the issue. If provided, it will be enhanced to follow best practices. If not provided, a description will be auto-generated.",
           },
           issueType: {
             type: "string",
@@ -286,7 +286,7 @@ export const JIRA_TOOLS: ChatCompletionTool[] = [
               },
               epicDescription: {
                 type: "string",
-                description: "Description for the new epic"
+                description: "Description for the new epic. If provided, it will be enhanced to follow best practices. If not provided, a description will be auto-generated."
               },
               issueKey: {
                 type: "string",
@@ -300,6 +300,43 @@ export const JIRA_TOOLS: ChatCompletionTool[] = [
           }
         },
         required: ["operationType", "parameters"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_issue",
+      description: "Update specific fields of an existing Jira issue. Only fields that are explicitly provided will be updated.",
+      parameters: {
+        type: "object",
+        properties: {
+          issueKey: {
+            type: "string",
+            description: "The key of the issue to update (e.g., PROJ-123)"
+          },
+          summary: {
+            type: "string",
+            description: "New summary/title for the issue (only updated if provided)"
+          },
+          description: {
+            type: "string",
+            description: "New description for the issue. Will be enhanced to follow best practices. (only updated if provided)"
+          },
+          issueType: {
+            type: "string",
+            description: "New issue type (e.g., Bug, Task, Story) (only updated if provided)"
+          },
+          priority: {
+            type: "string",
+            description: "New priority (e.g., Highest, High, Medium, Low, Lowest) (only updated if provided)"
+          },
+          assignee: {
+            type: "string",
+            description: "User ID to assign the issue to (only updated if provided)"
+          }
+        },
+        required: ["issueKey"]
       }
     }
   }
