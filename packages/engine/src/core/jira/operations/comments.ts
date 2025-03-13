@@ -39,7 +39,7 @@ export function configureCommentOperations(client: JiraClient) {
     
     return { 
       success: true, 
-      message: `Successfully added comment to issue ${issueKey}` 
+      message: `Successfully added comment to issue ${issueKey}`
     };
   }
   

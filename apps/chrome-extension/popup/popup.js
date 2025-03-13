@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let jiraContext = null;
 
   // Configuration
-  const API_URL = "http://localhost:3000/api";
+  const API_URL = "http://localhost:3001/api";
 
   // Initialize
   init();
@@ -34,6 +34,7 @@ document.addEventListener("DOMContentLoaded", () => {
   async function init() {
     loadJiraContext();
     loadChatHistory();
+    refreshEventListeners();
   }
 
   function loadJiraContext() {
@@ -55,6 +56,8 @@ document.addEventListener("DOMContentLoaded", () => {
     chrome.storage.local.get(["chatHistory"], (result) => {
       if (result.chatHistory) {
         displayMessages(JSON.parse(result.chatHistory));
+        console.log("Loaded chat history", JSON.parse(result.chatHistory));
+        addEventListenersForIssueElements();
       }
     });
   }
@@ -115,7 +118,7 @@ document.addEventListener("DOMContentLoaded", () => {
       // Simply send the user's text and the Jira context as separate parameters
       const requestData = {
         text: text,
-        context: jiraContext || null
+        context: jiraContext || null,
       };
 
       console.log("Sending request:", requestData);
@@ -167,8 +170,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
           const executeData = await executeResponse.json();
 
+          console.log("executeData:", executeData);
+
           if (executeData.result) {
-            addMessage("assistant", executeData.result.message);
+            addMessage(
+              "assistant",
+              executeData.result.message,
+              executeData.result.data
+            );
           }
         } catch (error) {
           console.error("Error executing action:", error);
@@ -304,7 +313,7 @@ document.addEventListener("DOMContentLoaded", () => {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               text: data.text,
-              context: jiraContext || null
+              context: jiraContext || null,
             }),
           },
           30000
@@ -347,56 +356,87 @@ document.addEventListener("DOMContentLoaded", () => {
   function displayMessages(messages) {
     chatMessages.innerHTML = "";
     messages.forEach((message) =>
-      addMessageToDOM(message.role, message.content)
+      addMessageToDOM(message.role, message.content, message.issues)
     );
     chatMessages.scrollTop = chatMessages.scrollHeight;
   }
 
-  function addMessage(role, content) {
-    addMessageToDOM(role, content);
-    saveMessageToStorage(role, content);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+  function addMessage(role, content, data = {}) {
+    console.log(
+      `Adding message - Role: ${role}, Content: ${content?.substring(0, 50)}...`
+    );
+
+    const issues = [
+      ...(data?.issues || []),
+      ...(data?.issue ? [data.issue] : []),
+    ];
+    if (issues) {
+      addMessageToDOM(role, content, issues);
+      addEventListenersForIssueElements();
+      // Save to storage
+      saveMessageToStorage(role, content, issues);
+    } else {
+      // For regular messages, use the existing functions
+      addMessageToDOM(role, content);
+      saveMessageToStorage(role, content);
+    }
   }
 
-  function addMessageToDOM(role, content) {
+  function convertIssuesToDOM(issues) {
+    const issuesElement = document.createElement("div");
+    issuesElement.classList.add("issues");
+    issues
+      .map((issue) => convertIssueToDOM(issue))
+      .forEach((issue) => issuesElement.appendChild(issue));
+    return issuesElement;
+  }
+
+  function convertIssueToDOM(issue) {
+    const issueElement = document.createElement("div");
+    issueElement.classList.add("issue");
+    let innerHTML = `<div class="issue-header">`;
+    innerHTML += `<a href="#" class="issue-key-link" data-issue-key="${issue.key}">${issue.key}</a>`;
+    innerHTML += `<button class="delete-issue-btn" data-issue-key="${issue.key}">Delete</button>`;
+    innerHTML += `</div>`;
+
+    if (issue.fields?.summary)
+      innerHTML += `<span class="issue-summary">${issue.fields?.summary}</span>`;
+    if (issue.fields?.status)
+      innerHTML += `<span class="issue-status">Status: ${issue.fields?.status?.name}</span>`;
+    if (issue.fields?.issuetype)
+      innerHTML += `<span class="issue-type">Type: ${issue.fields?.issuetype?.name}</span>`;
+    if (issue.fields?.assignee)
+      innerHTML += `<span class="issue-assignee">Assignee: ${issue.fields?.assignee?.displayName}</span>`;
+    issueElement.innerHTML = innerHTML;
+
+    return issueElement;
+  }
+
+  function addMessageToDOM(role, content, issues = null) {
     const messageElement = document.createElement("div");
     messageElement.classList.add("message");
 
     if (role === "user") {
       messageElement.classList.add("user-message");
-      messageElement.textContent = content;
     } else {
       messageElement.classList.add("assistant-message");
+    }
+    messageElement.textContent = content;
 
-      if (content.includes("Issue Key:")) {
-        let formattedContent = content
-          .replace(/\n/g, "<br>")
-          .replace(/Issue Key: ([\w-]+)/g, (match, issueKey) => {
-            return `<span class="issue-key">${issueKey}</span> <button class="delete-issue-btn" data-issue-key="${issueKey}">Delete</button>`;
-          });
-
-        messageElement.innerHTML = formattedContent;
-
-        messageElement
-          .querySelectorAll(".delete-issue-btn")
-          .forEach((button) => {
-            button.addEventListener("click", () => {
-              const issueKey = button.getAttribute("data-issue-key");
-              deleteIssue(issueKey);
-            });
-          });
-      } else {
-        messageElement.textContent = content;
+    if (issues) {
+      const issuesDOM = convertIssuesToDOM(issues);
+      if (issuesDOM) {
+        messageElement.appendChild(issuesDOM);
       }
     }
 
     chatMessages.appendChild(messageElement);
   }
 
-  function saveMessageToStorage(role, content) {
+  function saveMessageToStorage(role, content, issues) {
     chrome.storage.local.get(["chatHistory"], (result) => {
       let messages = result.chatHistory ? JSON.parse(result.chatHistory) : [];
-      messages.push({ role, content });
+      messages.push({ role, content, issues });
 
       if (messages.length > 50) {
         messages = messages.slice(messages.length - 50);
@@ -469,6 +509,63 @@ document.addEventListener("DOMContentLoaded", () => {
         setTimeout(() => reject(new Error("Request timed out")), timeout)
       ),
     ]);
+  }
+
+  function openIssueInCurrentTab(issueKey) {
+    // Get the base URL from the Jira context if available
+    let baseUrl = "";
+    if (jiraContext && jiraContext.url) {
+      // Extract the base URL (e.g., https://your-domain.atlassian.net)
+      const urlParts = jiraContext.url.match(/^(https?:\/\/[^\/]+)/);
+      if (urlParts && urlParts[1]) {
+        baseUrl = urlParts[1];
+      }
+    }
+
+    // If we couldn't determine the base URL, we'll use a generic Jira URL format
+    // The user's Jira instance will redirect appropriately
+    const issueUrl = baseUrl
+      ? `${baseUrl}/browse/${issueKey}`
+      : `https://jira.atlassian.com/browse/${issueKey}`;
+
+    // Open the issue in the current tab
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      chrome.tabs.update(tabs[0].id, { url: issueUrl });
+    });
+  }
+
+  function addEventListenersForIssueElements() {
+    // First, remove existing event listeners by cloning and replacing elements
+    chatMessages.querySelectorAll(".delete-issue-btn").forEach((button) => {
+      const newButton = button.cloneNode(true);
+      button.parentNode.replaceChild(newButton, button);
+    });
+
+    chatMessages.querySelectorAll(".issue-key-link").forEach((link) => {
+      const newLink = link.cloneNode(true);
+      link.parentNode.replaceChild(newLink, link);
+    });
+
+    // Now add fresh event listeners
+    chatMessages.querySelectorAll(".delete-issue-btn").forEach((button) => {
+      button.addEventListener("click", () => {
+        const issueKey = button.getAttribute("data-issue-key");
+        deleteIssue(issueKey);
+      });
+    });
+
+    chatMessages.querySelectorAll(".issue-key-link").forEach((link) => {
+      link.addEventListener("click", (e) => {
+        e.preventDefault();
+        const issueKey = link.getAttribute("data-issue-key");
+        openIssueInCurrentTab(issueKey);
+      });
+    });
+  }
+
+  function refreshEventListeners() {
+    // Call this function whenever you need to refresh all event listeners
+    addEventListenersForIssueElements();
   }
 });
 

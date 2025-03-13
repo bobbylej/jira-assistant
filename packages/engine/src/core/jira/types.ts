@@ -54,4 +54,18 @@ export interface OperationResult {
   success: boolean;
   message: string;
   data?: any;
-} 
+}
+
+export interface JiraResponse<T> {
+  success: boolean;
+  message?: string;
+  data?: T;
+}
+
+export interface SingleIssueJiraResponse extends JiraResponse<JiraIssue> {}
+
+export interface LinkIssueJiraResponse
+  extends JiraResponse<{
+    sourceIssue?: JiraIssue;
+    targetIssue?: JiraIssue;
+  }> {}

@@ -42,8 +42,6 @@
     if (boardMatch) {
       context.projectKey = boardMatch[1];
       context.boardId = boardMatch[2];
-      context.boardType = document.querySelector('[data-test-id="software-board.board-header.backlog-button"]') 
-        ? 'scrum' : 'kanban';
     }
     
     return context;

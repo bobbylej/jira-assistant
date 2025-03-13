@@ -45,5 +45,6 @@ export function configureJiraService(config: JiraConfig) {
   };
 }
 
+export type JiraService = ReturnType<typeof configureJiraService>;
 // Re-export types
 export * from './types'; 

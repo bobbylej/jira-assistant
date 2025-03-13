@@ -195,6 +195,27 @@ header h1 {
   color: #0052cc;
 }
 
+.issues {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.issue {
+  display: flex;
+  flex-direction: column;
+  background-color: #ffffff;
+  border-radius: 4px;
+  padding: 4px;
+}
+
+.issue-header {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  gap: 4px;
+}
+
 .issue-key {
   font-weight: bold;
   color: #0052cc;
