@@ -4,7 +4,6 @@ import {
   JiraResponse,
   JiraSearchResult,
   LinkIssueJiraResponse,
-  OperationResult,
   SingleIssueJiraResponse,
 } from "../types";
 import { jiraRequest } from "../client";

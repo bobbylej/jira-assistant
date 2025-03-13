@@ -2,22 +2,7 @@ import { OpenAI } from "openai";
 import { JIRA_TOOLS } from "../../adapters/openai/prompts";
 import { logger } from "../../utils/logger";
 import { JiraService } from "../jira";
-
-// Define the JiraContext type
-export interface JiraContext {
-  url?: string;
-  domain?: string;
-  projectKey?: string;
-  issueKey?: string;
-  issueSummary?: string;
-  issueStatus?: string;
-  issueType?: string;
-  issueDescription?: string;
-  assignee?: string;
-  boardId?: string;
-  boardType?: string;
-  comments?: Array<{ text: string; author?: string; created?: string }>;
-}
+import { ChatMessage, JiraContext } from "./types";
 
 export function configureCommandService(
   openai: OpenAI,
@@ -147,7 +132,7 @@ export function configureCommandService(
     return prompt;
   }
 
-  async function interpretCommand(text: string, context?: JiraContext) {
+  async function interpretCommand(text: string, context?: JiraContext, chatHistory?: ChatMessage[]) {
     try {
       logger.info("Interpreting command:", text);
 
@@ -159,6 +144,7 @@ export function configureCommandService(
         ? createEnhancedPrompt(text, contextText)
         : text;
 
+      logger.info("Chat history:", chatHistory);
       logger.info("Enhanced prompt:", enhancedPrompt);
 
       // Command interpretation logic using OpenAI function calling
@@ -182,6 +168,7 @@ export function configureCommandService(
               "Always prefer using the available tools to perform actions rather than just describing what could be done. " +
               "Be concise but thorough in your responses.",
           },
+          ...(chatHistory || []),
           { role: "user", content: enhancedPrompt },
         ],
         tools: JIRA_TOOLS,

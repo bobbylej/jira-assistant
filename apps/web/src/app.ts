@@ -91,7 +91,7 @@ app.post('/api/transcribe', upload.single('audio'), async (req, res) => {
 // Interpret command
 app.post('/api/interpret', async (req, res) => {
   try {
-    const { text, context } = req.body;
+    const { text, context, chatHistory } = req.body;
     
     if (!text) {
       return res.status(400).json({ error: 'No text provided' });
@@ -102,7 +102,7 @@ app.post('/api/interpret', async (req, res) => {
       console.log('With context:', JSON.stringify(context).substring(0, 200) + '...');
     }
     
-    const action = await engine.interpretCommand(text, context);
+    const action = await engine.interpretCommand(text, context, chatHistory);
     console.log('Interpretation result:', action);
     
     // Log the response we're sending back

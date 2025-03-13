@@ -52,14 +52,19 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  function loadChatHistory() {
-    chrome.storage.local.get(["chatHistory"], (result) => {
-      if (result.chatHistory) {
-        displayMessages(JSON.parse(result.chatHistory));
-        console.log("Loaded chat history", JSON.parse(result.chatHistory));
-        addEventListenersForIssueElements();
-      }
+  async function getChatHistory() {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(["chatHistory"], (result) => {
+        resolve(result.chatHistory ? JSON.parse(result.chatHistory) : []);
+      });
     });
+  }
+
+  async function loadChatHistory() {
+    const chatHistory = await getChatHistory();
+    displayMessages(chatHistory);
+    console.log("Loaded chat history", chatHistory);
+    addEventListenersForIssueElements();
   }
 
   function updateContextDisplay() {
@@ -105,6 +110,24 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  function parseChatHistory(chatHistory) {
+    return chatHistory.map((message) => {
+      let content = message.content || "";
+      if (message.issues) {
+        content += `\nIssues: ${message.issues
+          .map(
+            (issue) =>
+              `[${issue.key}] ${issue.fields?.summary} (Status: ${issue.fields?.status?.name}, Type: ${issue.fields?.issuetype?.name}, Assignee: ${issue.fields?.assignee?.displayName})`
+          )
+          .join(", ")}`;
+      }
+      return {
+        role: message.role,
+        content: message.content,
+      };
+    });
+  }
+
   // Message handling
   async function handleSendMessage() {
     const text = textInput.value.trim();
@@ -115,10 +138,12 @@ document.addEventListener("DOMContentLoaded", () => {
     showLoading();
 
     try {
-      // Simply send the user's text and the Jira context as separate parameters
+      const chatHistory = await getChatHistory();
+      console.log("Chat history:", chatHistory);
       const requestData = {
         text: text,
         context: jiraContext || null,
+        chatHistory: chatHistory ? parseChatHistory(chatHistory) : [],
       };
 
       console.log("Sending request:", requestData);
@@ -370,16 +395,10 @@ document.addEventListener("DOMContentLoaded", () => {
       ...(data?.issues || []),
       ...(data?.issue ? [data.issue] : []),
     ];
-    if (issues) {
-      addMessageToDOM(role, content, issues);
-      addEventListenersForIssueElements();
-      // Save to storage
-      saveMessageToStorage(role, content, issues);
-    } else {
-      // For regular messages, use the existing functions
-      addMessageToDOM(role, content);
-      saveMessageToStorage(role, content);
-    }
+    addMessageToDOM(role, content, issues);
+    addEventListenersForIssueElements();
+    // Save to storage
+    saveMessageToStorage(role, content, issues);
   }
 
   function convertIssuesToDOM(issues) {
@@ -433,17 +452,15 @@ document.addEventListener("DOMContentLoaded", () => {
     chatMessages.appendChild(messageElement);
   }
 
-  function saveMessageToStorage(role, content, issues) {
-    chrome.storage.local.get(["chatHistory"], (result) => {
-      let messages = result.chatHistory ? JSON.parse(result.chatHistory) : [];
-      messages.push({ role, content, issues });
+  async function saveMessageToStorage(role, content, issues) {
+    const chatHistory = await getChatHistory();
+    chatHistory.push({ role, content, issues });
 
-      if (messages.length > 50) {
-        messages = messages.slice(messages.length - 50);
-      }
+    if (chatHistory.length > 50) {
+      chatHistory = chatHistory.slice(chatHistory.length - 50);
+    }
 
-      chrome.storage.local.set({ chatHistory: JSON.stringify(messages) });
-    });
+    chrome.storage.local.set({ chatHistory: JSON.stringify(chatHistory) });
   }
 
   async function deleteIssue(issueKey) {
