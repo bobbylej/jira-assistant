@@ -46,5 +46,6 @@ export function configureJiraService(config: JiraConfig) {
 }
 
 export type JiraService = ReturnType<typeof configureJiraService>;
+export type JiraActionParams<T extends keyof JiraService> = Parameters<JiraService[T]>;
 // Re-export types
 export * from './types'; 

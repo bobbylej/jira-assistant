@@ -58,6 +58,7 @@ export function configureIssueOperations(client: JiraClient) {
     issueType = "Task",
     priority,
     assignee,
+    parentIssueKey
   }: {
     projectKey: string;
     summary: string;
@@ -65,6 +66,7 @@ export function configureIssueOperations(client: JiraClient) {
     issueType?: string;
     priority?: string;
     assignee?: string;
+    parentIssueKey?: string;
   }): Promise<SingleIssueJiraResponse> {
     logger.info(`Creating issue in project ${projectKey}: ${summary}`);
 
@@ -101,6 +103,13 @@ export function configureIssueOperations(client: JiraClient) {
     if (assignee) {
       issueData.fields.assignee = {
         id: assignee,
+      };
+    }
+
+    // Add parent issue key if provided
+    if (parentIssueKey) {
+      issueData.fields.parent = {
+        key: parentIssueKey
       };
     }
 
