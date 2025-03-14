@@ -12,9 +12,6 @@ document.addEventListener("DOMContentLoaded", () => {
   let isRecording = false;
   let jiraContext = null;
 
-  // Configuration
-  const API_URL = "http://localhost:3001/api";
-
   // Initialize
   init();
 
@@ -32,9 +29,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Core functions
   async function init() {
+    await loadConfig();
     loadJiraContext();
     loadChatHistory();
     refreshEventListeners();
+  }
+
+  async function loadConfig() {
+    try {
+      const configUrl = chrome.runtime.getURL('config.json');
+      const response = await fetch(configUrl);
+      const config = await response.json();
+      window.API_URL = config.API_URL || "http://localhost:3001/api";
+    } catch (error) {
+      console.error("Error loading config:", error);
+      window.API_URL = "http://localhost:3001/api"; // Fallback URL
+    }
   }
 
   function loadJiraContext() {
