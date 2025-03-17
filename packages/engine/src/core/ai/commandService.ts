@@ -11,7 +11,10 @@ import {
   JiraMultiStepActionParamsType,
   MoveToEpicParams,
 } from "./types";
-import { convertJiraContextToText, createEnhancedPrompt } from "./utils/prompts.utils";
+import {
+  convertJiraContextToText,
+  createEnhancedPrompt,
+} from "./utils/prompts.utils";
 
 export function configureCommandService(
   openai: OpenAI,
@@ -75,20 +78,6 @@ export function configureCommandService(
               parameters: args,
             };
           case "create_issue":
-            // Always enhance the description, whether provided or not
-            // try {
-            //   const originalDescription = args.description || "";
-            //   args.description = await enhanceDescription(
-            //     args.issueType || "Task",
-            //     args.summary,
-            //     originalDescription,
-            //     context
-            //   );
-            // } catch (descError) {
-            //   logger.warn("Failed to enhance description:", descError);
-            //   // Continue with original description if enhancement fails
-            // }
-
             return {
               actionType: "createIssue",
               parameters: args,
@@ -425,6 +414,19 @@ export function configureCommandService(
           return jiraService.searchIssues(action.parameters);
 
         case "createIssue":
+          // Always enhance the description, whether provided or not
+          try {
+            const originalDescription = action.parameters.description || "";
+            action.parameters.description = await enhanceDescription(
+              action.parameters.issueType || "Task",
+              action.parameters.summary,
+              originalDescription,
+              context
+            );
+          } catch (descError) {
+            logger.warn("Failed to enhance description:", descError);
+            // Continue with original description if enhancement fails
+          }
           return jiraService.createIssue(action.parameters);
 
         case "updateIssueType":
@@ -502,10 +504,24 @@ export function configureCommandService(
           return moveToEpic(action.parameters);
 
         case "updateIssue":
+          if (action.parameters.description) {
+            try {
+              const { data: issue } = await jiraService.getIssue({
+                issueKey: action.parameters.issueKey,
+              });
+              const originalDescription = action.parameters.description || "";
+              action.parameters.description = await enhanceDescription(
+                action.parameters.issueType || issue?.fields.issuetype.name || "Task",
+                action.parameters.summary || issue?.fields.summary || "",
+                originalDescription,
+                context
+              );
+            } catch (descError) {
+              logger.warn("Failed to enhance description:", descError);
+              // Continue with original description if enhancement fails
+            }
+          }
           return jiraService.updateIssue(action.parameters);
-
-        case "multiStepOperation":
-          return multiStepOperation(action.parameters);
 
         case "message":
           return {
@@ -753,7 +769,9 @@ export function configureCommandService(
     }
   }
 
-  async function multiStepOperation(params: JiraMultiStepActionParamsType['parameters']) {
+  async function multiStepOperation(
+    params: JiraMultiStepActionParamsType["parameters"]
+  ) {
     // Perform a sequence of related Jira operations as a single transaction
     logger.info(
       `Performing multi-step operation: ${params.functions
@@ -866,7 +884,7 @@ Remember that Tasks should have titles that start with a verb (e.g., "Build", "C
           {
             role: "system",
             content:
-              "You are a Jira expert who writes clear, detailed issue descriptions following best practices. Your descriptions are concise yet thorough, providing all necessary information without unnecessary details. You structure information logically with clear headings and bullet points for readability.",
+              "You are a Jira expert who writes clear, detailed but short issue descriptions following best practices. Your descriptions are concise yet thorough, providing all necessary information without unnecessary details. You structure information logically with clear headings and bullet points for readability.",
           },
           { role: "user", content: prompt },
         ],
@@ -891,7 +909,7 @@ Remember that Tasks should have titles that start with a verb (e.g., "Build", "C
   ): Promise<string> {
     // If no original description, generate a new one
     if (!originalDescription || originalDescription.trim() === "") {
-      return generateAIDescription(issueType, summary, context, chatHistory);
+      return await generateAIDescription(issueType, summary, context, chatHistory);
     }
 
     try {
@@ -967,14 +985,15 @@ Please improve this description following these best practices:
           {
             role: "system",
             content:
-              "You are a Jira expert who improves issue descriptions while preserving their original content and intent. You restructure and enhance descriptions to follow best practices without changing the core information.",
+              "You are a Jira expert who improves issue descriptions while preserving their original content and intent. You restructure and enhance descriptions to follow best practices without changing the core information. You make the description more concise and clear.",
           },
           { role: "user", content: prompt },
         ],
         temperature: 0.5,
       });
 
-      return response.choices[0].message.content || originalDescription;
+      const enhancedDescription = response.choices[0].message.content || originalDescription;
+      return enhancedDescription;
     } catch (error) {
       logger.error("Error enhancing description:", error);
       // Return the original description if enhancement fails

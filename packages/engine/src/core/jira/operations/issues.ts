@@ -8,6 +8,7 @@ import {
 } from "../types";
 import { jiraRequest } from "../client";
 import { logger } from "../../../utils/logger";
+import { formatDescription } from "../utils/description.utils";
 
 export function configureIssueOperations(client: JiraClient) {
   async function getIssue({
@@ -72,7 +73,7 @@ export function configureIssueOperations(client: JiraClient) {
 
     // Format the description (it's already been enhanced by the AI if needed)
     const formattedDescription = description
-      ? formatDescription(description, issueType)
+      ? formatDescription(description)
       : generateDefaultDescription(issueType, summary);
 
     const issueData: any = {
@@ -127,35 +128,6 @@ export function configureIssueOperations(client: JiraClient) {
       message: `Successfully created issue: ${response.key}`,
       data: issue,
     };
-  }
-
-  /**
-   * Formats a description into Jira's Atlassian Document Format
-   */
-  function formatDescription(description: string, issueType: string): any {
-    // If the description is already in ADF format, return it as is
-    if (typeof description === "object") {
-      return description;
-    }
-
-    // Create a basic ADF document
-    const adfDoc = {
-      type: "doc",
-      version: 1,
-      content: [
-        {
-          type: "paragraph",
-          content: [
-            {
-              type: "text",
-              text: description,
-            },
-          ],
-        },
-      ],
-    };
-
-    return adfDoc;
   }
 
   /**
@@ -682,19 +654,9 @@ export function configureIssueOperations(client: JiraClient) {
 
     // Only get the current issue if we need to format the description
     if (description) {
-      // Get the current issue to determine its type for description formatting
-      let currentIssueType: string | undefined;
-      try {
-        const { data: currentIssue } = await getIssue({ issueKey });
-        currentIssueType = currentIssue?.fields.issuetype.name;
-      } catch (error) {
-        logger.warn(`Could not get current issue type for ${issueKey}:`, error);
-      }
-
       // Format the description with the appropriate issue type
       fields.description = formatDescription(
-        description,
-        currentIssueType || issueType || ""
+        description
       );
     }
 
