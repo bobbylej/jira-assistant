@@ -24,14 +24,16 @@ Status and Workflow:
 Linking and Relationships:
 - link_issues: Create relationships between issues (relates to, blocks, etc.)
 - create_epic_and_link: Create a new epic and link existing issues to it
-- create_and_link_subtasks: Create multiple subtasks under a parent issue
 - move_to_epic: Move existing issues to an epic
 
 Priority and Users:
 - update_issue_priority: Change the priority of an issue
 - get_project_users: Get users associated with a Jira project
 
+If you need to perform multiple steps, please define multiple tool calls in the same message.
 My primary objective is to leverage these Jira tools to perform actions directly, rather than simply describing possibilities. I'll always use the most appropriate function for the task at hand, and I'll provide clear explanations of what I've done or what information I've found.`;
+
+// - create_and_link_subtasks: Create multiple subtasks under a parent issue
 
 // Define tools
 export const JIRA_TOOLS: ChatCompletionTool[] = [
@@ -297,81 +299,50 @@ export const JIRA_TOOLS: ChatCompletionTool[] = [
       },
     },
   },
-  {
-    type: "function",
-    function: {
-      name: "multi_step_operation",
-      description:
-        "Perform a sequence of related Jira operations as a single transaction",
-      parameters: {
-        type: "object",
-        properties: {
-          projectKey: {
-            type: "string",
-            description: "The project key (e.g., PROJ)",
-          },
-          epicSummary: {
-            type: "string",
-            description: "Summary for the new epic",
-          },
-          epicDescription: {
-            type: "string",
-            description:
-              "Description for the new epic. If provided, it will be enhanced to follow best practices. If not provided, a description will be auto-generated.",
-          },
-          issueKey: {
-            type: "string",
-            description:
-              "The issue key to link to the epic (e.g., PROJ-123)",
-          },
-        },
-        required: ["projectKey", "epicSummary"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "create_and_link_subtasks",
-      description: "Create multiple subtasks and link them to a parent issue",
-      parameters: {
-        type: "object",
-        properties: {
-          projectKey: {
-            type: "string",
-            description: "The project key (e.g., PROJ)",
-          },
-          parentIssueKey: {
-            type: "string",
-            description: "The key of the parent issue for creating subtasks",
-          },
-          subtasks: {
-            type: "array",
-            description: "List of subtasks to create",
-            items: {
-              type: "object",
-              properties: {
-                summary: {
-                  type: "string",
-                  description: "Summary/title for the subtask"
-                },
-                description: {
-                  type: "string",
-                  description: "Description for the subtask (optional)"
-                },
-                assignee: {
-                  type: "string",
-                  description: "Account ID of user to assign the subtask to (optional)"
-                }
-              },
-              required: ["summary"]
-            }
-          }
-        },
-        required: ["projectKey", "parentIssueKey", "subtasks"],
-      },
-    },
-  },
+  // {
+  //   type: "function",
+  //   function: {
+  //     name: "create_and_link_subtasks",
+  //     description: "Create multiple subtasks and link them to a parent issue",
+  //     parameters: {
+  //       type: "object",
+  //       properties: {
+  //         projectKey: {
+  //           type: "string",
+  //           description: "The project key (e.g., PROJ)",
+  //         },
+  //         parentIssueKey: {
+  //           type: "string",
+  //           description: "The key of the parent issue for creating subtasks",
+  //         },
+  //         subtasks: {
+  //           type: "array",
+  //           description: "List of subtasks to create",
+  //           items: {
+  //             type: "object",
+  //             properties: {
+  //               summary: {
+  //                 type: "string",
+  //                 description: "Summary/title for the subtask",
+  //               },
+  //               description: {
+  //                 type: "string",
+  //                 description: "Description for the subtask (optional)",
+  //               },
+  //               assignee: {
+  //                 type: "string",
+  //                 description:
+  //                   "Account ID of user to assign the subtask to (optional)",
+  //               },
+  //             },
+  //             required: ["summary"],
+  //           },
+  //         },
+  //       },
+  //       required: ["projectKey", "parentIssueKey", "subtasks"],
+  //     },
+  //   },
+  // },
   {
     type: "function",
     function: {
@@ -440,4 +411,55 @@ export const JIRA_TOOLS: ChatCompletionTool[] = [
       },
     },
   },
+  // {
+  //   type: "function",
+  //   function: {
+  //     name: "multi_step_operation",
+  //     description:
+  //       "Perform a sequence of related Jira operations as a single transaction",
+  //     parameters: {
+  //       type: "object",
+  //       properties: {
+  //         functions: {
+  //           type: "array",
+  //           description:
+  //             "Ordered list of functions to perform. It has to be one of the functions defined in the tools array.",
+  //           items: {
+  //             type: "object",
+  //             properties: {
+  //               name: {
+  //                 type: "string",
+  //                 enum: [
+  //                   "get_issue",
+  //                   "search_issues",
+  //                   "create_issue",
+  //                   "update_issue_type",
+  //                   "delete_issue",
+  //                   "add_comment",
+  //                   "assign_issue",
+  //                   "transition_issue",
+  //                   "get_issue_transitions",
+  //                   "get_project_users",
+  //                   "update_issue_priority",
+  //                   "link_issues",
+  //                   "create_epic_and_link",
+  //                   "create_and_link_subtasks",
+  //                   "move_to_epic",
+  //                   "update_issue",
+  //                 ],
+  //                 description: "The name of the function to call",
+  //               },
+  //               parameters: {
+  //                 type: "object",
+  //                 description: "The parameters to pass to the function",
+  //               },
+  //             },
+  //             required: ["name", "parameters"],
+  //           },
+  //         },
+  //       },
+  //       required: ["functions"],
+  //     },
+  //   },
+  // },
 ];

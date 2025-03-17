@@ -2,137 +2,227 @@ import { OpenAI } from "openai";
 import { JIRA_TOOLS, SYSTEM_PROMPT } from "../../adapters/openai/prompts";
 import { logger } from "../../utils/logger";
 import { JiraService } from "../jira";
-import { ChatMessage, CreateAndLinkSubtasksParams, CreateEpicAndLinkParams, JiraActionParamsType, JiraContext, MoveToEpicParams } from "./types";
+import {
+  ChatMessage,
+  CreateAndLinkSubtasksParams,
+  CreateEpicAndLinkParams,
+  JiraActionParamsType,
+  JiraContext,
+  JiraMultiStepActionParamsType,
+  MoveToEpicParams,
+} from "./types";
+import { convertJiraContextToText, createEnhancedPrompt } from "./utils/prompts.utils";
 
 export function configureCommandService(
   openai: OpenAI,
   jiraService: JiraService
 ) {
-  /**
-   * Converts a JiraContext object into a descriptive text format
-   * that's easier for the AI to understand and utilize
-   */
-  function convertJiraContextToText(context: JiraContext | null): string {
-    if (!context) return "";
+  async function interpretCommand(
+    text: string,
+    context?: JiraContext,
+    chatHistory?: ChatMessage[]
+  ) {
+    try {
+      logger.info("Interpreting command:", text);
 
-    let contextText = "# Current Jira Context\n";
+      // Convert Jira context to text format
+      const contextText = context ? convertJiraContextToText(context) : "";
 
-    // Add project information
-    if (context.projectKey) {
-      contextText += `## Project: ${context.projectKey}\n`;
-    }
+      // Create enhanced prompt with user text and context
+      const enhancedPrompt = contextText
+        ? createEnhancedPrompt(text, contextText)
+        : text;
 
-    // Add issue information if available
-    if (context.issueKey) {
-      contextText += `## Issue: ${context.issueKey}\n`;
+      logger.info("Chat history:", chatHistory);
+      logger.info("Enhanced prompt:", enhancedPrompt);
 
-      if (context.issueSummary) {
-        contextText += `Summary: "${context.issueSummary}"\n`;
-      }
+      // Command interpretation logic using OpenAI function calling
+      const response = await openai.chat.completions.create({
+        model: "gpt-4-turbo",
+        messages: [
+          {
+            role: "system",
+            content: SYSTEM_PROMPT,
+          },
+          ...(chatHistory || []),
+          { role: "user", content: enhancedPrompt },
+        ],
+        tools: JIRA_TOOLS,
+        temperature: 0.5,
+      });
 
-      if (context.issueStatus) {
-        contextText += `Status: ${context.issueStatus}\n`;
-      }
+      // Process the response
+      const message = response.choices[0].message;
 
-      if (context.issueType) {
-        contextText += `Type: ${context.issueType}\n`;
-      }
+      // Handle tool calls
+      logger.info("Tool calls:", message.tool_calls);
+      const actions = message.tool_calls?.map((toolCall) => {
+        const functionName = toolCall.function.name;
+        const args = JSON.parse(toolCall.function.arguments);
 
-      if (context.assignee) {
-        contextText += `Assignee: ${context.assignee}\n`;
-      }
+        logger.info(`Tool call: ${functionName}`, args);
 
-      // Add description if available
-      if (context.issueDescription) {
-        contextText += `\nDescription:\n${context.issueDescription}\n`;
-      }
+        // Map function names to actions
+        switch (functionName) {
+          case "get_issue":
+            return {
+              actionType: "getIssue",
+              parameters: args,
+            };
+          case "search_issues":
+            return {
+              actionType: "searchIssues",
+              parameters: args,
+            };
+          case "create_issue":
+            // Always enhance the description, whether provided or not
+            // try {
+            //   const originalDescription = args.description || "";
+            //   args.description = await enhanceDescription(
+            //     args.issueType || "Task",
+            //     args.summary,
+            //     originalDescription,
+            //     context
+            //   );
+            // } catch (descError) {
+            //   logger.warn("Failed to enhance description:", descError);
+            //   // Continue with original description if enhancement fails
+            // }
 
-      // Add comments if available
-      if (context.comments && context.comments.length > 0) {
-        contextText += `\nThis issue has ${context.comments.length} comments.\n`;
+            return {
+              actionType: "createIssue",
+              parameters: args,
+              approveRequired: true,
+            };
+          case "update_issue_type":
+            return {
+              actionType: "updateIssueType",
+              parameters: {
+                issueKey: args.issueKey,
+                issueType: args.newIssueType,
+              },
+              approveRequired: true,
+            };
+          case "delete_issue":
+            return {
+              actionType: "deleteIssue",
+              parameters: {
+                issueKey: args.issueKey,
+              },
+              approveRequired: true,
+            };
+          case "add_comment":
+            return {
+              actionType: "addComment",
+              parameters: args,
+              approveRequired: true,
+            };
+          case "assign_issue":
+            return {
+              actionType: "assignIssue",
+              parameters: args,
+              approveRequired: true,
+            };
+          case "get_issue_transitions":
+            return {
+              actionType: "getIssueTransitions",
+              parameters: args,
+            };
+          case "transition_issue":
+            return {
+              actionType: "transitionIssue",
+              parameters: args,
+              approveRequired: true,
+            };
+          case "get_project_users":
+            return {
+              actionType: "getProjectUsers",
+              parameters: args,
+            };
+          case "update_issue_priority":
+            return {
+              actionType: "updateIssuePriority",
+              parameters: args,
+              approveRequired: true,
+            };
+          case "link_issues":
+            return {
+              actionType: "linkIssues",
+              parameters: args,
+              approveRequired: true,
+            };
+          case "multi_step_operation":
+            return {
+              actionType: "multiStepOperation",
+              parameters: args,
+            };
+          case "update_issue":
+            // Only enhance the description if it's explicitly provided
+            // if (args.description) {
+            //   try {
+            //     // Get the issue type if available
+            //     let issueType = args.issueType;
+            //     if (!issueType && args.issueKey) {
+            //       try {
+            //         const { data: issue } = await jiraService.getIssue({
+            //           issueKey: args.issueKey,
+            //         });
+            //         issueType = issue?.fields.issuetype.name;
+            //       } catch (error) {
+            //         logger.warn(
+            //           `Could not get issue type for ${args.issueKey}:`,
+            //           error
+            //         );
+            //       }
+            //     }
 
-        // Include recent comments
-        if (context.comments.length <= 3) {
-          contextText += "Recent comments:\n";
-          context.comments.forEach((comment, index) => {
-            contextText += `- Comment ${index + 1}: ${comment.text.substring(
-              0,
-              100
-            )}${comment.text.length > 100 ? "..." : ""}\n`;
-          });
-        } else {
-          contextText +=
-            "Most recent comment: " +
-            context.comments[context.comments.length - 1].text.substring(
-              0,
-              100
-            ) +
-            (context.comments[context.comments.length - 1].text.length > 100
-              ? "..."
-              : "") +
-            "\n";
+            //     args.description = await enhanceDescription(
+            //       issueType || "Task",
+            //       args.summary || "",
+            //       args.description,
+            //       context
+            //     );
+            //   } catch (descError) {
+            //     logger.warn("Failed to enhance description:", descError);
+            //     // Continue with original description if enhancement fails
+            //   }
+            // }
+
+            return {
+              actionType: "updateIssue",
+              parameters: args,
+              approveRequired: true,
+            };
+          default:
+            return {
+              actionType: "message",
+              parameters: {
+                message: `I don't know how to perform the action: ${functionName}`,
+              },
+            };
         }
-      }
+      });
+
+      return {
+        actionType: "message",
+        parameters: {
+          message: message.content || "I understood your request.",
+          actions,
+        },
+      };
+    } catch (error: unknown) {
+      logger.error("Error interpreting command:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      throw new Error(`Error interpreting command: ${errorMessage}`);
     }
-
-    // Add board information if available
-    if (context.boardId) {
-      contextText += `\n## Board Information\n`;
-      contextText += `Board ID: ${context.boardId}\n`;
-
-      if (context.boardType) {
-        contextText += `Board Type: ${context.boardType}\n`;
-      }
-    }
-
-    // Add URL information
-    if (context.url) {
-      contextText += `\n## URL\n${context.url}\n`;
-    }
-
-    // Add capabilities section to guide the AI
-    contextText += "\n## Available Actions\n";
-    contextText += "- Create new issues in the current project\n";
-    contextText += "- Update issue details (status, assignee, etc.)\n";
-    contextText += "- Add comments to issues\n";
-    contextText += "- Search for issues by key or criteria\n";
-    contextText += "- Provide information about Jira concepts\n";
-
-    return contextText.trim();
   }
 
-  /**
-   * Creates an enhanced prompt by combining the user's message with the Jira context
-   */
-  function createEnhancedPrompt(
-    userMessage: string,
-    contextText: string
-  ): string {
-    if (!contextText) {
-      return userMessage;
-    }
-
-    // Start with the context
-    let prompt = `${contextText}\n\n`;
-
-    // Add the user's message
-    prompt += `User request: "${userMessage}"\n\n`;
-
-    // Add instructions for the AI
-    prompt +=
-      "Based on the Jira context above, please interpret the user's request and determine the appropriate action. " +
-      "If the request is related to the current Jira context, use that information to provide a more relevant response. " +
-      "If the user is asking about creating, updating, or managing Jira issues, consider the current project and board context.\n\n" +
-      "Important notes for Jira operations:\n" +
-      "1. When updating issue types, make sure the target type exists in the project (common types: Task, Story, Bug, Epic)\n" +
-      "2. When creating subtasks, they must be linked to a parent issue\n" +
-      "3. Some operations may require specific permissions in Jira\n" +
-      "4. If an operation fails, provide a helpful error message and suggest alternatives";
-
-    return prompt;
-  }
-
-  async function interpretCommand(text: string, context?: JiraContext, chatHistory?: ChatMessage[]) {
+  async function interpretCommandOld(
+    text: string,
+    context?: JiraContext,
+    chatHistory?: ChatMessage[]
+  ) {
     try {
       logger.info("Interpreting command:", text);
 
@@ -167,6 +257,7 @@ export function configureCommandService(
 
       // Handle tool calls
       if (message.tool_calls && message.tool_calls.length > 0) {
+        logger.info("Tool calls:", message.tool_calls);
         const toolCall = message.tool_calls[0];
         const functionName = toolCall.function.name;
         const args = JSON.parse(toolCall.function.arguments);
@@ -319,7 +410,10 @@ export function configureCommandService(
     }
   }
 
-  async function executeAction(action: JiraActionParamsType, context?: JiraContext) {
+  async function executeAction(
+    action: JiraActionParamsType,
+    context?: JiraContext
+  ) {
     try {
       logger.info("Executing action:", action);
 
@@ -410,6 +504,9 @@ export function configureCommandService(
         case "updateIssue":
           return jiraService.updateIssue(action.parameters);
 
+        case "multiStepOperation":
+          return multiStepOperation(action.parameters);
+
         case "message":
           return {
             success: true,
@@ -433,7 +530,10 @@ export function configureCommandService(
     }
   }
 
-  async function createEpicAndLink(params: CreateEpicAndLinkParams, context?: JiraContext) {
+  async function createEpicAndLink(
+    params: CreateEpicAndLinkParams,
+    context?: JiraContext
+  ) {
     try {
       // Enhance the epic description if provided, or generate a new one
       const originalDescription = params.epicDescription || "";
@@ -518,29 +618,32 @@ export function configureCommandService(
     }
   }
 
-  async function createAndLinkSubtasks(params: CreateAndLinkSubtasksParams, context?: JiraContext) {
+  async function createAndLinkSubtasks(
+    params: CreateAndLinkSubtasksParams,
+    context?: JiraContext
+  ) {
     try {
       // Create multiple subtasks for a parent issue
       logger.info(
         `Creating ${params.subtasks.length} subtasks for parent issue ${params.parentIssueKey}`
       );
-      
+
       // Get parent issue details to use the same project
       const { data: parentIssue } = await jiraService.getIssue({
-        issueKey: params.parentIssueKey
+        issueKey: params.parentIssueKey,
       });
-      
+
       if (!parentIssue) {
         return {
           success: false,
-          message: `Failed to get parent issue ${params.parentIssueKey}`
+          message: `Failed to get parent issue ${params.parentIssueKey}`,
         };
       }
-      
+
       const projectKey = params.projectKey;
       const createdSubtasks = [];
       const failedSubtasks = [];
-      
+
       // Create each subtask
       for (const subtask of params.subtasks) {
         try {
@@ -558,55 +661,69 @@ export function configureCommandService(
               // Continue with original description
             }
           }
-          
+
           // Create the subtask
-          const { success, data: subtaskResult } = await jiraService.createIssue({
-            projectKey,
-            summary: subtask.summary,
-            description: subtask.description || `Subtask for ${params.parentIssueKey}`,
-            issueType: "Sub-task",
-            parentIssueKey: params.parentIssueKey
-          });
-          
+          const { success, data: subtaskResult } =
+            await jiraService.createIssue({
+              projectKey,
+              summary: subtask.summary,
+              description:
+                subtask.description || `Subtask for ${params.parentIssueKey}`,
+              issueType: "Sub-task",
+              parentIssueKey: params.parentIssueKey,
+            });
+
           if (success && subtaskResult) {
             createdSubtasks.push(subtaskResult.key);
-            
+
             // If assignee is specified, assign the subtask
             if (subtask.assignee) {
               try {
                 await jiraService.assignIssue({
                   issueKey: subtaskResult.key,
-                  accountId: subtask.assignee
+                  accountId: subtask.assignee,
                 });
               } catch (assignError) {
-                logger.warn(`Failed to assign subtask ${subtaskResult.key}:`, assignError);
+                logger.warn(
+                  `Failed to assign subtask ${subtaskResult.key}:`,
+                  assignError
+                );
               }
             }
           } else {
             failedSubtasks.push(subtask.summary);
           }
         } catch (subtaskError) {
-          logger.error(`Error creating subtask "${subtask.summary}":`, subtaskError);
+          logger.error(
+            `Error creating subtask "${subtask.summary}":`,
+            subtaskError
+          );
           failedSubtasks.push(subtask.summary);
         }
       }
-      
+
       // Generate result message
       let resultMessage = "";
       if (createdSubtasks.length > 0) {
-        resultMessage += `Successfully created ${createdSubtasks.length} subtasks for ${params.parentIssueKey}: ${createdSubtasks.join(", ")}. `;
+        resultMessage += `Successfully created ${
+          createdSubtasks.length
+        } subtasks for ${params.parentIssueKey}: ${createdSubtasks.join(
+          ", "
+        )}. `;
       }
-      
+
       if (failedSubtasks.length > 0) {
-        resultMessage += `Failed to create ${failedSubtasks.length} subtasks: ${failedSubtasks.join(", ")}`;
+        resultMessage += `Failed to create ${
+          failedSubtasks.length
+        } subtasks: ${failedSubtasks.join(", ")}`;
       }
-      
+
       return {
         success: createdSubtasks.length > 0,
         message: resultMessage,
         data: {
-          issues: createdSubtasks.map(key => ({ key }))
-        }
+          issues: createdSubtasks.map((key) => ({ key })),
+        },
       };
     } catch (error) {
       logger.error("Error in createAndLinkSubtasks operation:", error);
@@ -634,6 +751,21 @@ export function configureCommandService(
       logger.error("Error in moveToEpic operation:", error);
       throw error;
     }
+  }
+
+  async function multiStepOperation(params: JiraMultiStepActionParamsType['parameters']) {
+    // Perform a sequence of related Jira operations as a single transaction
+    logger.info(
+      `Performing multi-step operation: ${params.functions
+        .map((f) => f.actionType)
+        .join(", ")}`
+    );
+    // Implement the logic to perform the operations in sequence
+    // This is a placeholder implementation
+    return {
+      success: true,
+      message: "Multi-step operation completed successfully",
+    };
   }
 
   // Add this function to generate AI-powered descriptions

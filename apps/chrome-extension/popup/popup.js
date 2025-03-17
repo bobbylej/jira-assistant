@@ -37,7 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function loadConfig() {
     try {
-      const configUrl = chrome.runtime.getURL('config.json');
+      const configUrl = chrome.runtime.getURL("config.json");
       const response = await fetch(configUrl);
       const config = await response.json();
       window.API_URL = config.API_URL || "http://localhost:3001/api";
@@ -63,18 +63,63 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function getChatHistory() {
-    return new Promise((resolve) => {
-      chrome.storage.local.get(["chatHistory"], (result) => {
-        resolve(result.chatHistory ? JSON.parse(result.chatHistory) : []);
-      });
-    });
+    const result = await chrome.storage.local.get(["chatHistory"]);
+    return result.chatHistory ? JSON.parse(result.chatHistory) : [];
   }
 
   async function loadChatHistory() {
     const chatHistory = await getChatHistory();
     displayMessages(chatHistory);
     console.log("Loaded chat history", chatHistory);
+    
+    await updateActionStatusesInDOM();
+    
     addEventListenersForIssueElements();
+    addEventListenersForActionButtons();
+  }
+
+  async function updateActionStatusesInDOM() {
+    // Load action statuses
+    const actionStatuses = await loadActionStatuses();
+    console.log("Action statuses:", actionStatuses);
+    
+    // Apply statuses to action buttons
+    Object.entries(actionStatuses).forEach(([actionId, status]) => {
+      const button = document.querySelector(`.approve-action-btn[data-action-id="${actionId}"]`);
+      if (button) {
+        const actionMessage = button.closest('.action-message');
+        
+        if (status.status === 'completed') {
+          // Apply completed styling
+          if (actionMessage) actionMessage.classList.add('action-success');
+          button.textContent = "Completed ✓";
+          button.classList.add('action-completed');
+          button.disabled = true;
+          
+          // Add status message if not already present
+          if (!button.parentNode.querySelector('.action-status')) {
+            const statusMessage = document.createElement('div');
+            statusMessage.classList.add('action-status');
+            statusMessage.innerHTML = `<span class="status-success">Successfully executed</span>`;
+            button.parentNode.appendChild(statusMessage);
+          }
+        } 
+        else if (status.status === 'failed') {
+          // Apply failed styling
+          if (actionMessage) actionMessage.classList.add('action-failure');
+          button.textContent = "Try again";
+          button.classList.add('action-failed');
+          
+          // Add status message if not already present
+          if (!button.parentNode.querySelector('.action-status')) {
+            const statusMessage = document.createElement('div');
+            statusMessage.classList.add('action-status');
+            statusMessage.innerHTML = `<span class="status-error">Error: ${status.error || 'Unknown error'}</span>`;
+            button.parentNode.appendChild(statusMessage);
+          }
+        }
+      }
+    });
   }
 
   function updateContextDisplay() {
@@ -169,9 +214,31 @@ document.addEventListener("DOMContentLoaded", () => {
       );
 
       const data = await response.json();
+      console.log("Interpret response:", data);
 
       if (data.action) {
-        await handleAction(data.action);
+        if (data.action.parameters.actions) {
+          const actionsToExecute = data.action.parameters.actions.filter(
+            (action) => !action.approveRequired
+          );
+          actionsToExecute.forEach(async (action) => {
+            await handleAction(action);
+          });
+
+          const actionsToApprove = data.action.parameters.actions.filter(
+            (action) => action.approveRequired
+          ).map((action) => ({
+            ...action,
+            id: generateActionId(),
+          }));
+          await addMessage(
+            "assistant",
+            `Review and approve the following actions before executing them.`,
+            { actions: actionsToApprove }
+          );
+        } else {
+          await handleAction(data.action);
+        }
       }
     } catch (error) {
       console.error("Error processing message:", error);
@@ -181,7 +248,301 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  async function handleAction(action) {
+  // Add a utility function to generate unique IDs
+  function generateActionId() {
+    return 'action_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  }
+
+  // Store actions in memory with their IDs
+  const pendingActions = new Map();
+
+  async function addActionToDOM(action) {
+    const messageElement = document.createElement("div");
+    messageElement.classList.add("message", "assistant-message", "action-message");
+    
+    // Store the action in our map
+    pendingActions.set(action.id, action);
+    
+    // Create action header with humanized action type
+    const actionHeader = document.createElement("div");
+    actionHeader.classList.add("action-header");
+    
+    // Convert camelCase to Title Case with spaces
+    const humanizedActionType = action.actionType
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/^./, str => str.toUpperCase());
+    
+    actionHeader.innerHTML = `<strong>${humanizedActionType}</strong>`;
+    messageElement.appendChild(actionHeader);
+    
+    // Create parameters section
+    const paramsContainer = document.createElement("div");
+    paramsContainer.classList.add("action-parameters");
+    
+    // Display each parameter in a readable format
+    Object.entries(action.parameters).forEach(([key, value]) => {
+      const paramRow = document.createElement("div");
+      paramRow.classList.add("param-row");
+      
+      // Convert camelCase parameter name to readable format
+      const readableKey = key
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/^./, str => str.toUpperCase());
+      
+      let valueDisplay = '';
+      
+      // Format the value based on its type
+      if (typeof value === 'object' && value !== null) {
+        valueDisplay = `<pre>${JSON.stringify(value, null, 2)}</pre>`;
+      } else {
+        valueDisplay = String(value);
+      }
+      
+      paramRow.innerHTML = `<span class="param-name">${readableKey}:</span> <span class="param-value">${valueDisplay}</span>`;
+      paramsContainer.appendChild(paramRow);
+    });
+    
+    messageElement.appendChild(paramsContainer);
+    
+    // Add approve button
+    const approveButton = document.createElement("button");
+    approveButton.classList.add("approve-action-btn");
+    approveButton.textContent = "Approve & Execute";
+    approveButton.setAttribute("data-action-id", action.id);
+    
+    // Add button container
+    const buttonContainer = document.createElement("div");
+    buttonContainer.classList.add("action-buttons");
+    buttonContainer.appendChild(approveButton);
+    messageElement.appendChild(buttonContainer);
+    
+    chatMessages.appendChild(messageElement);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    
+    return action.id;
+  }
+
+  function convertIssuesToDOM(issues) {
+    const issuesElement = document.createElement("div");
+    issuesElement.classList.add("issues");
+    issues
+      .map((issue) => convertIssueToDOM(issue))
+      .forEach((issue) => issuesElement.appendChild(issue));
+    return issuesElement;
+  }
+
+  function convertIssueToDOM(issue) {
+    const issueElement = document.createElement("div");
+    issueElement.classList.add("issue");
+    let innerHTML = `<div class="issue-header">`;
+    innerHTML += `<a href="#" class="issue-key-link" data-issue-key="${issue.key}">${issue.key}</a>`;
+    innerHTML += `<button class="delete-issue-btn" data-issue-key="${issue.key}">Delete</button>`;
+    innerHTML += `</div>`;
+
+    if (issue.fields?.summary)
+      innerHTML += `<span class="issue-summary">${issue.fields?.summary}</span>`;
+    if (issue.fields?.status)
+      innerHTML += `<span class="issue-status">Status: ${issue.fields?.status?.name}</span>`;
+    if (issue.fields?.issuetype)
+      innerHTML += `<span class="issue-type">Type: ${issue.fields?.issuetype?.name}</span>`;
+    if (issue.fields?.assignee)
+      innerHTML += `<span class="issue-assignee">Assignee: ${issue.fields?.assignee?.displayName}</span>`;
+    issueElement.innerHTML = innerHTML;
+
+    return issueElement;
+  }
+
+  function addMessageToDOM(role, content, issues = null) {
+    const messageElement = document.createElement("div");
+    messageElement.classList.add("message");
+
+    if (role === "user") {
+      messageElement.classList.add("user-message");
+    } else {
+      messageElement.classList.add("assistant-message");
+    }
+    messageElement.textContent = content;
+
+    if (issues) {
+      const issuesDOM = convertIssuesToDOM(issues);
+      if (issuesDOM) {
+        messageElement.appendChild(issuesDOM);
+      }
+    }
+
+    chatMessages.appendChild(messageElement);
+  }
+
+  async function saveMessageToStorage(role, content, data = {}) {
+    try {
+      const chatHistory = await getChatHistory();
+      console.log("Saving message to storage:", { role, content, data }, chatHistory);
+      
+      // Create a new message object
+      const newMessage = { role, content, data };
+      
+      // Add to chat history
+      chatHistory.push(newMessage);
+
+      // Limit history size
+      if (chatHistory.length > 50) {
+        chatHistory = chatHistory.slice(chatHistory.length - 50);
+      }
+
+      // Save to storage
+      await chrome.storage.local.set({
+        chatHistory: JSON.stringify(chatHistory),
+      });
+    } catch (error) {
+      console.error("Error saving message to storage:", error);
+    }
+  }
+
+  async function deleteIssue(issueKey) {
+    if (!confirm(`Are you sure you want to delete issue ${issueKey}?`)) {
+      return;
+    }
+
+    showLoading();
+
+    try {
+      // Include Jira context in the delete request
+      const response = await fetchWithTimeout(
+        `${API_URL}/jira/issue/${issueKey}`,
+        {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            context: {
+              jira: jiraContext || null,
+            },
+          }),
+        },
+        30000
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        addMessage("assistant", data.message);
+      } else {
+        addMessage("assistant", `Error: ${data.error}`);
+      }
+    } catch (error) {
+      console.error("Error deleting issue:", error);
+      addMessage("assistant", `Error deleting issue: ${error.message}`);
+    } finally {
+      hideLoading();
+    }
+  }
+
+  async function clearChat() {
+    chatMessages.innerHTML = "";
+    await chrome.storage.local.remove(["chatHistory", "actionStatuses"]);
+  }
+
+  // Utility functions
+  function base64ToBlob(base64Data) {
+    const byteCharacters = atob(base64Data.split(",")[1]);
+    const byteNumbers = new Array(byteCharacters.length);
+
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+
+    const byteArray = new Uint8Array(byteNumbers);
+    return new Blob([byteArray], { type: "audio/wav" });
+  }
+
+  function fetchWithTimeout(url, options, timeout = 10000) {
+    return Promise.race([
+      fetch(url, options),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Request timed out")), timeout)
+      ),
+    ]);
+  }
+
+  function openIssueInCurrentTab(issueKey) {
+    // Get the base URL from the Jira context if available
+    let baseUrl = "";
+    if (jiraContext && jiraContext.url) {
+      // Extract the base URL (e.g., https://your-domain.atlassian.net)
+      const urlParts = jiraContext.url.match(/^(https?:\/\/[^\/]+)/);
+      if (urlParts && urlParts[1]) {
+        baseUrl = urlParts[1];
+      }
+    }
+
+    // If we couldn't determine the base URL, we'll use a generic Jira URL format
+    // The user's Jira instance will redirect appropriately
+    const issueUrl = baseUrl
+      ? `${baseUrl}/browse/${issueKey}`
+      : `https://jira.atlassian.com/browse/${issueKey}`;
+
+    // Open the issue in the current tab
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      chrome.tabs.update(tabs[0].id, { url: issueUrl });
+    });
+  }
+
+  function addEventListenersForIssueElements() {
+    // First, remove existing event listeners by cloning and replacing elements
+    chatMessages.querySelectorAll(".delete-issue-btn").forEach((button) => {
+      const newButton = button.cloneNode(true);
+      button.parentNode.replaceChild(newButton, button);
+    });
+
+    chatMessages.querySelectorAll(".issue-key-link").forEach((link) => {
+      const newLink = link.cloneNode(true);
+      link.parentNode.replaceChild(newLink, link);
+    });
+
+    // Now add fresh event listeners
+    chatMessages.querySelectorAll(".delete-issue-btn").forEach((button) => {
+      button.addEventListener("click", () => {
+        const issueKey = button.getAttribute("data-issue-key");
+        deleteIssue(issueKey);
+      });
+    });
+
+    chatMessages.querySelectorAll(".issue-key-link").forEach((link) => {
+      link.addEventListener("click", (e) => {
+        e.preventDefault();
+        const issueKey = link.getAttribute("data-issue-key");
+        openIssueInCurrentTab(issueKey);
+      });
+    });
+  }
+
+  function addEventListenersForActionButtons() {
+    chatMessages.querySelectorAll(".approve-action-btn").forEach((button) => {
+      const newButton = button.cloneNode(true);
+      button.parentNode.replaceChild(newButton, button);
+      
+      newButton.addEventListener("click", function() {
+        const actionId = this.getAttribute("data-action-id");
+        const action = pendingActions.get(actionId);
+        
+        if (!action) {
+          console.error("Action not found:", actionId);
+          return;
+        }
+        
+        // Disable the button to prevent multiple clicks
+        this.disabled = true;
+        this.textContent = "Executing...";
+        
+        // Execute the action
+        handleAction(action, actionId);
+      });
+    });
+  }
+
+  async function handleAction(action, actionId) {
+    // Find the button using the action ID
+    const actionButton = document.querySelector(`.approve-action-btn[data-action-id="${actionId}"]`);
+    
     switch (action.actionType) {
       case "message":
       case "error":
@@ -207,7 +568,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
           console.log("executeData:", executeData);
 
-          if (executeData.result) {
+          if (executeData.result) {            
+            // Save the success status to storage
+            await saveActionStatus(actionId, {
+              status: 'completed',
+              timestamp: Date.now()
+            });
+            
+            // Remove the action from pending actions
+            pendingActions.delete(actionId);
+            
             addMessage(
               "assistant",
               executeData.result.message,
@@ -216,9 +586,29 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         } catch (error) {
           console.error("Error executing action:", error);
+          
+          // Save the failure status to storage
+          await saveActionStatus(actionId, {
+            status: 'failed',
+            error: error.message,
+            timestamp: Date.now()
+          });
+          
           addMessage("assistant", `Error executing action: ${error.message}`);
+        } finally {
+          if (actionButton) {
+            await updateActionStatusesInDOM();
+          }
         }
     }
+  }
+
+  function refreshEventListeners() {
+    // Call this function whenever you need to refresh all event listeners
+    addEventListenersForIssueElements();
+    
+    // Also refresh action approval buttons
+    addEventListenersForActionButtons();
   }
 
   // Recording functions
@@ -389,210 +779,78 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function displayMessages(messages) {
+    // Clear existing messages first
     chatMessages.innerHTML = "";
-    messages.forEach((message) =>
-      addMessageToDOM(message.role, message.content, message.issues)
-    );
+    
+    // Then add each message from history
+    messages.forEach((message) => {
+      addMessageToChat(message.role, message.content, message.data);
+    });
+    
+    // Scroll to the bottom
     chatMessages.scrollTop = chatMessages.scrollHeight;
   }
 
-  function addMessage(role, content, data = {}) {
+  function addMessageToChat(role, content, data = {}) {
+    if (role === "assistant" && data && data.actions) {      
+      // Add each action that requires approval
+      data.actions.forEach(async (action) => {
+        if (action.approveRequired) {
+          await addActionToDOM(action);
+        }
+      });
+    } else {
+      const issues = [
+        ...(data?.issues || []),
+        ...(data?.issue ? [data.issue] : []),
+      ];
+
+      addMessageToDOM(role, content, issues);
+    }
+  }
+
+  async function addMessage(role, content, data = {}) {
     console.log(
       `Adding message - Role: ${role}, Content: ${content?.substring(0, 50)}...`
     );
+    
+    // Check if data contains actions that need approval
+    addMessageToChat(role, content, data);
 
-    const issues = [
-      ...(data?.issues || []),
-      ...(data?.issue ? [data.issue] : []),
-    ];
-    addMessageToDOM(role, content, issues);
     addEventListenersForIssueElements();
+    addEventListenersForActionButtons();
     // Save to storage
-    saveMessageToStorage(role, content, issues);
+    await saveMessageToStorage(role, content, data);
   }
 
-  function convertIssuesToDOM(issues) {
-    const issuesElement = document.createElement("div");
-    issuesElement.classList.add("issues");
-    issues
-      .map((issue) => convertIssueToDOM(issue))
-      .forEach((issue) => issuesElement.appendChild(issue));
-    return issuesElement;
-  }
-
-  function convertIssueToDOM(issue) {
-    const issueElement = document.createElement("div");
-    issueElement.classList.add("issue");
-    let innerHTML = `<div class="issue-header">`;
-    innerHTML += `<a href="#" class="issue-key-link" data-issue-key="${issue.key}">${issue.key}</a>`;
-    innerHTML += `<button class="delete-issue-btn" data-issue-key="${issue.key}">Delete</button>`;
-    innerHTML += `</div>`;
-
-    if (issue.fields?.summary)
-      innerHTML += `<span class="issue-summary">${issue.fields?.summary}</span>`;
-    if (issue.fields?.status)
-      innerHTML += `<span class="issue-status">Status: ${issue.fields?.status?.name}</span>`;
-    if (issue.fields?.issuetype)
-      innerHTML += `<span class="issue-type">Type: ${issue.fields?.issuetype?.name}</span>`;
-    if (issue.fields?.assignee)
-      innerHTML += `<span class="issue-assignee">Assignee: ${issue.fields?.assignee?.displayName}</span>`;
-    issueElement.innerHTML = innerHTML;
-
-    return issueElement;
-  }
-
-  function addMessageToDOM(role, content, issues = null) {
-    const messageElement = document.createElement("div");
-    messageElement.classList.add("message");
-
-    if (role === "user") {
-      messageElement.classList.add("user-message");
-    } else {
-      messageElement.classList.add("assistant-message");
-    }
-    messageElement.textContent = content;
-
-    if (issues) {
-      const issuesDOM = convertIssuesToDOM(issues);
-      if (issuesDOM) {
-        messageElement.appendChild(issuesDOM);
-      }
-    }
-
-    chatMessages.appendChild(messageElement);
-  }
-
-  async function saveMessageToStorage(role, content, issues) {
-    const chatHistory = await getChatHistory();
-    chatHistory.push({ role, content, issues });
-
-    if (chatHistory.length > 50) {
-      chatHistory = chatHistory.slice(chatHistory.length - 50);
-    }
-
-    chrome.storage.local.set({ chatHistory: JSON.stringify(chatHistory) });
-  }
-
-  async function deleteIssue(issueKey) {
-    if (!confirm(`Are you sure you want to delete issue ${issueKey}?`)) {
-      return;
-    }
-
-    showLoading();
-
+  // Add a function to save action status to storage
+  async function saveActionStatus(actionId, status) {
     try {
-      // Include Jira context in the delete request
-      const response = await fetchWithTimeout(
-        `${API_URL}/jira/issue/${issueKey}`,
-        {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            context: {
-              jira: jiraContext || null,
-            },
-          }),
-        },
-        30000
-      );
-
-      const data = await response.json();
-
-      if (data.success) {
-        addMessage("assistant", data.message);
-      } else {
-        addMessage("assistant", `Error: ${data.error}`);
-      }
+      // Get existing action statuses
+      const result = await chrome.storage.local.get(['actionStatuses']);
+      const actionStatuses = result.actionStatuses || {};
+      
+      // Update the status for this action
+      actionStatuses[actionId] = status;
+      
+      // Save back to storage
+      await chrome.storage.local.set({ actionStatuses });
+      
+      console.log(`Saved action status: ${actionId} -> ${status}`);
     } catch (error) {
-      console.error("Error deleting issue:", error);
-      addMessage("assistant", `Error deleting issue: ${error.message}`);
-    } finally {
-      hideLoading();
+      console.error('Error saving action status:', error);
     }
   }
 
-  function clearChat() {
-    chatMessages.innerHTML = "";
-    chrome.storage.local.remove(["chatHistory"]);
-  }
-
-  // Utility functions
-  function base64ToBlob(base64Data) {
-    const byteCharacters = atob(base64Data.split(",")[1]);
-    const byteNumbers = new Array(byteCharacters.length);
-
-    for (let i = 0; i < byteCharacters.length; i++) {
-      byteNumbers[i] = byteCharacters.charCodeAt(i);
+  // Add a function to load action statuses
+  async function loadActionStatuses() {
+    try {
+      const result = await chrome.storage.local.get(['actionStatuses']);
+      return result.actionStatuses || {};
+    } catch (error) {
+      console.error('Error loading action statuses:', error);
+      return {};
     }
-
-    const byteArray = new Uint8Array(byteNumbers);
-    return new Blob([byteArray], { type: "audio/wav" });
-  }
-
-  function fetchWithTimeout(url, options, timeout = 10000) {
-    return Promise.race([
-      fetch(url, options),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Request timed out")), timeout)
-      ),
-    ]);
-  }
-
-  function openIssueInCurrentTab(issueKey) {
-    // Get the base URL from the Jira context if available
-    let baseUrl = "";
-    if (jiraContext && jiraContext.url) {
-      // Extract the base URL (e.g., https://your-domain.atlassian.net)
-      const urlParts = jiraContext.url.match(/^(https?:\/\/[^\/]+)/);
-      if (urlParts && urlParts[1]) {
-        baseUrl = urlParts[1];
-      }
-    }
-
-    // If we couldn't determine the base URL, we'll use a generic Jira URL format
-    // The user's Jira instance will redirect appropriately
-    const issueUrl = baseUrl
-      ? `${baseUrl}/browse/${issueKey}`
-      : `https://jira.atlassian.com/browse/${issueKey}`;
-
-    // Open the issue in the current tab
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      chrome.tabs.update(tabs[0].id, { url: issueUrl });
-    });
-  }
-
-  function addEventListenersForIssueElements() {
-    // First, remove existing event listeners by cloning and replacing elements
-    chatMessages.querySelectorAll(".delete-issue-btn").forEach((button) => {
-      const newButton = button.cloneNode(true);
-      button.parentNode.replaceChild(newButton, button);
-    });
-
-    chatMessages.querySelectorAll(".issue-key-link").forEach((link) => {
-      const newLink = link.cloneNode(true);
-      link.parentNode.replaceChild(newLink, link);
-    });
-
-    // Now add fresh event listeners
-    chatMessages.querySelectorAll(".delete-issue-btn").forEach((button) => {
-      button.addEventListener("click", () => {
-        const issueKey = button.getAttribute("data-issue-key");
-        deleteIssue(issueKey);
-      });
-    });
-
-    chatMessages.querySelectorAll(".issue-key-link").forEach((link) => {
-      link.addEventListener("click", (e) => {
-        e.preventDefault();
-        const issueKey = link.getAttribute("data-issue-key");
-        openIssueInCurrentTab(issueKey);
-      });
-    });
-  }
-
-  function refreshEventListeners() {
-    // Call this function whenever you need to refresh all event listeners
-    addEventListenersForIssueElements();
   }
 });
 

@@ -39,7 +39,7 @@ export interface MoveToEpicParams {
   issueKey: string;
 }
 
-export type JiraActionParamsType =
+type JiraSingleStepActionParamsType =
   | { actionType: "getIssue"; parameters: JiraActionParams<"getIssue">[0] }
   | { actionType: "createIssue"; parameters: JiraActionParams<"createIssue">[0] }
   | { actionType: "updateIssue"; parameters: JiraActionParams<"updateIssue">[0] }
@@ -75,4 +75,13 @@ export type JiraActionParamsType =
   | { actionType: "createEpicAndLink"; parameters: CreateEpicAndLinkParams }
   | { actionType: "createAndLinkSubtasks"; parameters: CreateAndLinkSubtasksParams }
   | { actionType: "moveToEpic"; parameters: MoveToEpicParams }
-  | { actionType: "message"; parameters: { message: string } };
+  | { actionType: "message"; parameters: { message: string } }
+
+export type JiraMultiStepActionParamsType = {
+  actionType: "multiStepOperation";
+  parameters: { functions: JiraSingleStepActionParamsType[] };
+};
+
+export type JiraActionParamsType =
+  | JiraSingleStepActionParamsType
+  | JiraMultiStepActionParamsType;
