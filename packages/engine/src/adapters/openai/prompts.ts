@@ -33,8 +33,6 @@ Priority and Users:
 If you need to perform multiple steps, please define multiple tool calls in the same message.
 My primary objective is to leverage these Jira tools to perform actions directly, rather than simply describing possibilities. I'll always use the most appropriate function for the task at hand, and I'll provide clear explanations of what I've done or what information I've found.`;
 
-// - create_and_link_subtasks: Create multiple subtasks under a parent issue
-
 // Define tools
 export const JIRA_TOOLS: ChatCompletionTool[] = [
   {
@@ -299,50 +297,6 @@ export const JIRA_TOOLS: ChatCompletionTool[] = [
       },
     },
   },
-  // {
-  //   type: "function",
-  //   function: {
-  //     name: "create_and_link_subtasks",
-  //     description: "Create multiple subtasks and link them to a parent issue",
-  //     parameters: {
-  //       type: "object",
-  //       properties: {
-  //         projectKey: {
-  //           type: "string",
-  //           description: "The project key (e.g., PROJ)",
-  //         },
-  //         parentIssueKey: {
-  //           type: "string",
-  //           description: "The key of the parent issue for creating subtasks",
-  //         },
-  //         subtasks: {
-  //           type: "array",
-  //           description: "List of subtasks to create",
-  //           items: {
-  //             type: "object",
-  //             properties: {
-  //               summary: {
-  //                 type: "string",
-  //                 description: "Summary/title for the subtask",
-  //               },
-  //               description: {
-  //                 type: "string",
-  //                 description: "Description for the subtask (optional)",
-  //               },
-  //               assignee: {
-  //                 type: "string",
-  //                 description:
-  //                   "Account ID of user to assign the subtask to (optional)",
-  //               },
-  //             },
-  //             required: ["summary"],
-  //           },
-  //         },
-  //       },
-  //       required: ["projectKey", "parentIssueKey", "subtasks"],
-  //     },
-  //   },
-  // },
   {
     type: "function",
     function: {
@@ -411,55 +365,4 @@ export const JIRA_TOOLS: ChatCompletionTool[] = [
       },
     },
   },
-  // {
-  //   type: "function",
-  //   function: {
-  //     name: "multi_step_operation",
-  //     description:
-  //       "Perform a sequence of related Jira operations as a single transaction",
-  //     parameters: {
-  //       type: "object",
-  //       properties: {
-  //         functions: {
-  //           type: "array",
-  //           description:
-  //             "Ordered list of functions to perform. It has to be one of the functions defined in the tools array.",
-  //           items: {
-  //             type: "object",
-  //             properties: {
-  //               name: {
-  //                 type: "string",
-  //                 enum: [
-  //                   "get_issue",
-  //                   "search_issues",
-  //                   "create_issue",
-  //                   "update_issue_type",
-  //                   "delete_issue",
-  //                   "add_comment",
-  //                   "assign_issue",
-  //                   "transition_issue",
-  //                   "get_issue_transitions",
-  //                   "get_project_users",
-  //                   "update_issue_priority",
-  //                   "link_issues",
-  //                   "create_epic_and_link",
-  //                   "create_and_link_subtasks",
-  //                   "move_to_epic",
-  //                   "update_issue",
-  //                 ],
-  //                 description: "The name of the function to call",
-  //               },
-  //               parameters: {
-  //                 type: "object",
-  //                 description: "The parameters to pass to the function",
-  //               },
-  //             },
-  //             required: ["name", "parameters"],
-  //           },
-  //         },
-  //       },
-  //       required: ["functions"],
-  //     },
-  //   },
-  // },
 ];

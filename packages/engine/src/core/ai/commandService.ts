@@ -8,7 +8,6 @@ import {
   CreateEpicAndLinkParams,
   JiraActionParamsType,
   JiraContext,
-  JiraMultiStepActionParamsType,
   MoveToEpicParams,
 } from "./types";
 import {
@@ -140,43 +139,7 @@ export function configureCommandService(
               parameters: args,
               approveRequired: true,
             };
-          case "multi_step_operation":
-            return {
-              actionType: "multiStepOperation",
-              parameters: args,
-            };
           case "update_issue":
-            // Only enhance the description if it's explicitly provided
-            // if (args.description) {
-            //   try {
-            //     // Get the issue type if available
-            //     let issueType = args.issueType;
-            //     if (!issueType && args.issueKey) {
-            //       try {
-            //         const { data: issue } = await jiraService.getIssue({
-            //           issueKey: args.issueKey,
-            //         });
-            //         issueType = issue?.fields.issuetype.name;
-            //       } catch (error) {
-            //         logger.warn(
-            //           `Could not get issue type for ${args.issueKey}:`,
-            //           error
-            //         );
-            //       }
-            //     }
-
-            //     args.description = await enhanceDescription(
-            //       issueType || "Task",
-            //       args.summary || "",
-            //       args.description,
-            //       context
-            //     );
-            //   } catch (descError) {
-            //     logger.warn("Failed to enhance description:", descError);
-            //     // Continue with original description if enhancement fails
-            //   }
-            // }
-
             return {
               actionType: "updateIssue",
               parameters: args,
@@ -197,198 +160,6 @@ export function configureCommandService(
         parameters: {
           message: message.content || "I understood your request.",
           actions,
-        },
-      };
-    } catch (error: unknown) {
-      logger.error("Error interpreting command:", error);
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      throw new Error(`Error interpreting command: ${errorMessage}`);
-    }
-  }
-
-  async function interpretCommandOld(
-    text: string,
-    context?: JiraContext,
-    chatHistory?: ChatMessage[]
-  ) {
-    try {
-      logger.info("Interpreting command:", text);
-
-      // Convert Jira context to text format
-      const contextText = context ? convertJiraContextToText(context) : "";
-
-      // Create enhanced prompt with user text and context
-      const enhancedPrompt = contextText
-        ? createEnhancedPrompt(text, contextText)
-        : text;
-
-      logger.info("Chat history:", chatHistory);
-      logger.info("Enhanced prompt:", enhancedPrompt);
-
-      // Command interpretation logic using OpenAI function calling
-      const response = await openai.chat.completions.create({
-        model: "gpt-4-turbo",
-        messages: [
-          {
-            role: "system",
-            content: SYSTEM_PROMPT,
-          },
-          ...(chatHistory || []),
-          { role: "user", content: enhancedPrompt },
-        ],
-        tools: JIRA_TOOLS,
-        temperature: 0.5,
-      });
-
-      // Process the response
-      const message = response.choices[0].message;
-
-      // Handle tool calls
-      if (message.tool_calls && message.tool_calls.length > 0) {
-        logger.info("Tool calls:", message.tool_calls);
-        const toolCall = message.tool_calls[0];
-        const functionName = toolCall.function.name;
-        const args = JSON.parse(toolCall.function.arguments);
-
-        logger.info(`Tool call: ${functionName}`, args);
-
-        // Map function names to actions
-        switch (functionName) {
-          case "get_issue":
-            return {
-              actionType: "getIssue",
-              parameters: args,
-            };
-          case "search_issues":
-            return {
-              actionType: "searchIssues",
-              parameters: args,
-            };
-          case "create_issue":
-            // Always enhance the description, whether provided or not
-            try {
-              const originalDescription = args.description || "";
-              args.description = await enhanceDescription(
-                args.issueType || "Task",
-                args.summary,
-                originalDescription,
-                context
-              );
-            } catch (descError) {
-              logger.warn("Failed to enhance description:", descError);
-              // Continue with original description if enhancement fails
-            }
-
-            return {
-              actionType: "createIssue",
-              parameters: args,
-            };
-          case "update_issue_type":
-            return {
-              actionType: "updateIssueType",
-              parameters: {
-                issueKey: args.issueKey,
-                issueType: args.newIssueType,
-              },
-            };
-          case "delete_issue":
-            return {
-              actionType: "deleteIssue",
-              parameters: {
-                issueKey: args.issueKey,
-              },
-            };
-          case "add_comment":
-            return {
-              actionType: "addComment",
-              parameters: args,
-            };
-          case "assign_issue":
-            return {
-              actionType: "assignIssue",
-              parameters: args,
-            };
-          case "get_issue_transitions":
-            return {
-              actionType: "getIssueTransitions",
-              parameters: args,
-            };
-          case "transition_issue":
-            return {
-              actionType: "transitionIssue",
-              parameters: args,
-            };
-          case "get_project_users":
-            return {
-              actionType: "getProjectUsers",
-              parameters: args,
-            };
-          case "update_issue_priority":
-            return {
-              actionType: "updateIssuePriority",
-              parameters: args,
-            };
-          case "link_issues":
-            return {
-              actionType: "linkIssues",
-              parameters: args,
-            };
-          case "multi_step_operation":
-            return {
-              actionType: "multiStepOperation",
-              parameters: args,
-            };
-          case "update_issue":
-            // Only enhance the description if it's explicitly provided
-            if (args.description) {
-              try {
-                // Get the issue type if available
-                let issueType = args.issueType;
-                if (!issueType && args.issueKey) {
-                  try {
-                    const { data: issue } = await jiraService.getIssue({
-                      issueKey: args.issueKey,
-                    });
-                    issueType = issue?.fields.issuetype.name;
-                  } catch (error) {
-                    logger.warn(
-                      `Could not get issue type for ${args.issueKey}:`,
-                      error
-                    );
-                  }
-                }
-
-                args.description = await enhanceDescription(
-                  issueType || "Task",
-                  args.summary || "",
-                  args.description,
-                  context
-                );
-              } catch (descError) {
-                logger.warn("Failed to enhance description:", descError);
-                // Continue with original description if enhancement fails
-              }
-            }
-
-            return {
-              actionType: "updateIssue",
-              parameters: args,
-            };
-          default:
-            return {
-              actionType: "message",
-              parameters: {
-                message: `I don't know how to perform the action: ${functionName}`,
-              },
-            };
-        }
-      }
-
-      return {
-        actionType: "message",
-        parameters: {
-          message: message.content || "I understood your request.",
         },
       };
     } catch (error: unknown) {
@@ -767,23 +538,6 @@ export function configureCommandService(
       logger.error("Error in moveToEpic operation:", error);
       throw error;
     }
-  }
-
-  async function multiStepOperation(
-    params: JiraMultiStepActionParamsType["parameters"]
-  ) {
-    // Perform a sequence of related Jira operations as a single transaction
-    logger.info(
-      `Performing multi-step operation: ${params.functions
-        .map((f) => f.actionType)
-        .join(", ")}`
-    );
-    // Implement the logic to perform the operations in sequence
-    // This is a placeholder implementation
-    return {
-      success: true,
-      message: "Multi-step operation completed successfully",
-    };
   }
 
   // Add this function to generate AI-powered descriptions

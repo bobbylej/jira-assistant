@@ -77,11 +77,5 @@ type JiraSingleStepActionParamsType =
   | { actionType: "moveToEpic"; parameters: MoveToEpicParams }
   | { actionType: "message"; parameters: { message: string } }
 
-export type JiraMultiStepActionParamsType = {
-  actionType: "multiStepOperation";
-  parameters: { functions: JiraSingleStepActionParamsType[] };
-};
-
 export type JiraActionParamsType =
-  | JiraSingleStepActionParamsType
-  | JiraMultiStepActionParamsType;
+  | JiraSingleStepActionParamsType;
