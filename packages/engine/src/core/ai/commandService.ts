@@ -1,7 +1,7 @@
 import { OpenAI } from "openai";
 import { JIRA_TOOLS, SYSTEM_PROMPT } from "../../adapters/openai/prompts";
 import { logger } from "../../utils/logger";
-import { JiraService } from "../jira";
+import { JiraService, ProjectMetadata } from "../jira";
 import {
   ChatMessage,
   CreateAndLinkSubtasksParams,
@@ -9,16 +9,90 @@ import {
   JiraActionParamsType,
   JiraContext,
   MoveToEpicParams,
+  ToolFunctionProperty,
 } from "./types";
 import {
   convertJiraContextToText,
   createEnhancedPrompt,
 } from "./utils/prompts.utils";
+import { ChatCompletionTool } from "openai/resources";
 
 export function configureCommandService(
   openai: OpenAI,
   jiraService: JiraService
 ) {
+  // New function to fetch metadata for available fields
+  async function fetchJiraMetadata(
+    projectIdOrKey?: string
+  ): Promise<ProjectMetadata | null> {
+    try {
+      if (!projectIdOrKey) {
+        logger.info("No project key provided for metadata fetch");
+        return null;
+      }
+
+      // First get all issue types for the project
+      const issueTypesMetadata = await jiraService.getCreateMetadataIssueTypes(
+        projectIdOrKey
+      );
+      logger.info(
+        `Fetched ${
+          issueTypesMetadata?.issueTypes?.length || 0
+        } issue types for project ${projectIdOrKey}`
+      );
+
+      // Create a comprehensive metadata object with fields for each issue type
+      const fullMetadata: ProjectMetadata = {
+        projectKey: projectIdOrKey,
+        issueTypes: [],
+      };
+
+      if (!issueTypesMetadata?.issueTypes?.length) {
+        return fullMetadata; // Return what we have if no issue types found
+      }
+
+      // For each issue type, get its field metadata
+      for (const issueType of issueTypesMetadata.issueTypes) {
+        try {
+          const fieldMetadata = await jiraService.getCreateFieldMetadata(
+            projectIdOrKey,
+            issueType.id
+          );
+
+          fullMetadata.issueTypes.push({
+            id: issueType.id,
+            name: issueType.name,
+            description: issueType.description,
+            fields: fieldMetadata.fields,
+            subtask: issueType.subtask,
+          });
+
+          logger.info(
+            `Fetched field metadata for issue type ${issueType.name}`
+          );
+        } catch (error) {
+          logger.warn(
+            `Failed to fetch field metadata for issue type ${issueType.name}:`,
+            error
+          );
+          // Still include the issue type but without detailed field info
+          fullMetadata.issueTypes.push({
+            id: issueType.id,
+            name: issueType.name,
+            description: issueType.description,
+            fields: [],
+            subtask: issueType.subtask,
+          });
+        }
+      }
+
+      return fullMetadata;
+    } catch (error) {
+      logger.error("Error fetching Jira metadata:", error);
+      return null;
+    }
+  }
+
   async function interpretCommand(
     text: string,
     context?: JiraContext,
@@ -38,19 +112,44 @@ export function configureCommandService(
       logger.info("Chat history:", chatHistory);
       logger.info("Enhanced prompt:", enhancedPrompt);
 
-      // Command interpretation logic using OpenAI function calling
+      // Create a copy of the tools that we can modify
+      let jiraTools = [...JIRA_TOOLS];
+
+      // Fetch relevant Jira metadata if context contains project info
+      let metadataInfo = "";
+      if (context?.projectKey) {
+        const projectMetadata = await fetchJiraMetadata(context.projectKey);
+        logger.info("Project metadata:", projectMetadata);
+        if (projectMetadata) {
+          // Update the tools with the metadata
+          jiraTools = updateToolsWithMetadata(jiraTools, projectMetadata);
+
+          // Also include a brief summary of available issue types in the prompt
+          metadataInfo = generateMetadataSummary(projectMetadata);
+        }
+      }
+      // logger.info("---------------------------------");
+      // logger.info("Jira tools:", JSON.stringify(jiraTools, null, 2));
+      // logger.info("---------------------------------");
+      // logger.info("Metadata info:", metadataInfo);
+      // logger.info("---------------------------------");
+      // throw new Error("STOP");
+
+      // Call OpenAI with the enhanced prompt and tools
       const response = await openai.chat.completions.create({
         model: "gpt-4-turbo",
         messages: [
-          {
-            role: "system",
-            content: SYSTEM_PROMPT,
-          },
+          { role: "system", content: SYSTEM_PROMPT },
           ...(chatHistory || []),
-          { role: "user", content: enhancedPrompt },
+          {
+            role: "user",
+            content: metadataInfo
+              ? `${enhancedPrompt}\n\nAvailable Jira issue types:\n${metadataInfo}`
+              : enhancedPrompt,
+          },
         ],
-        tools: JIRA_TOOLS,
-        temperature: 0.5,
+        tools: jiraTools,
+        tool_choice: "auto",
       });
 
       // Process the response
@@ -282,7 +381,9 @@ export function configureCommandService(
               });
               const originalDescription = action.parameters.description || "";
               action.parameters.description = await enhanceDescription(
-                action.parameters.issueType || issue?.fields.issuetype.name || "Task",
+                action.parameters.issueType ||
+                  issue?.fields.issuetype.name ||
+                  "Task",
                 action.parameters.summary || issue?.fields.summary || "",
                 originalDescription,
                 context
@@ -663,7 +764,12 @@ Remember that Tasks should have titles that start with a verb (e.g., "Build", "C
   ): Promise<string> {
     // If no original description, generate a new one
     if (!originalDescription || originalDescription.trim() === "") {
-      return await generateAIDescription(issueType, summary, context, chatHistory);
+      return await generateAIDescription(
+        issueType,
+        summary,
+        context,
+        chatHistory
+      );
     }
 
     try {
@@ -746,7 +852,8 @@ Please improve this description following these best practices:
         temperature: 0.5,
       });
 
-      const enhancedDescription = response.choices[0].message.content || originalDescription;
+      const enhancedDescription =
+        response.choices[0].message.content || originalDescription;
       return enhancedDescription;
     } catch (error) {
       logger.error("Error enhancing description:", error);
@@ -755,8 +862,159 @@ Please improve this description following these best practices:
     }
   }
 
+  // Function to update the tools with metadata
+  function updateToolsWithMetadata(
+    tools: ChatCompletionTool[],
+    metadata: ProjectMetadata
+  ) {
+    // Create a deep copy of the tools array to avoid modifying the original
+    const updatedTools = [...tools];
+
+    // Find the create_issue and update_issue tools
+    const toolToCreateIssue = updatedTools.find(
+      (tool) =>
+        tool.type === "function" && tool.function.name === "create_issue"
+    );
+
+    const toolToUpdateIssue = updatedTools.find(
+      (tool) =>
+        tool.type === "function" && tool.function.name === "update_issue"
+    );
+
+    if (toolToCreateIssue) {
+      // Update the create_issue tool with metadata
+      updateIssueTool(toolToCreateIssue, metadata);
+    }
+
+    if (toolToUpdateIssue) {
+      // Update the update_issue tool with metadata
+      updateIssueTool(toolToUpdateIssue, metadata);
+    }
+
+    return updatedTools;
+  }
+
+  // Function to update the create_issue tool
+  function updateIssueTool(
+    tool: ChatCompletionTool,
+    metadata: ProjectMetadata
+  ) {
+    const properties: Record<string, ToolFunctionProperty> =
+      (tool.function.parameters?.properties as Record<
+        string,
+        ToolFunctionProperty
+      >) || {};
+
+    // Update the issueType property with available issue types
+    if (metadata.issueTypes.length > 0) {
+      const issueTypeNames = metadata.issueTypes.map((type) => type.name);
+      properties.issueType.enum = issueTypeNames;
+      properties.issueType.description = `Type of issue. Available types: ${issueTypeNames.join(
+        ", "
+      )}`;
+
+      // Add custom fields based on all issue types
+      const customFields: Record<string, ToolFunctionProperty> = {};
+      const customFieldDescriptions: Record<string, string[]> = {};
+
+      metadata.issueTypes.forEach((issueType) => {
+        if (issueType.fields && issueType.fields.length > 0) {
+          issueType.fields.forEach((field) => {
+            // Skip standard fields that are already in the schema
+            if (
+              ["summary", "description", "issuetype", "project"].includes(
+                field.key
+              )
+            ) {
+              return;
+            }
+
+            // Add custom field
+            if (!customFields[field.key]) {
+              let fieldType: ToolFunctionProperty["type"];
+              switch (field.schema.type) {
+                case "number":
+                case "integer":
+                  fieldType = "number";
+                  break;
+                default:
+                  fieldType =
+                    (field.schema.type as ToolFunctionProperty["type"]) ||
+                    "string";
+                  break;
+              }
+
+              customFields[field.key] = {
+                name: field.key,
+                type: fieldType,
+                description: `${field.name} (${issueType.name}${
+                  field.required ? ", Required" : ""
+                })`,
+                required: field.required,
+              };
+
+              // If it's an array, specify the items type
+              if (fieldType === "array" && field.schema && field.schema.items) {
+                logger.info("Field schema:", field.schema);
+                customFields[field.key].items = {
+                  type: "string",
+                  description: "Items in the array",
+                };
+              }
+
+              // If there are allowed values, add them as enum
+              if (field.allowedValues && field.allowedValues.length > 0) {
+                customFields[field.key].enum = field.allowedValues.map(
+                  (value) => value.toString()
+                );
+              }
+
+              // Track which issue types this field applies to
+              customFieldDescriptions[field.key] = [
+                `${issueType.name}${field.required ? " (Required)" : ""}`,
+              ];
+            } else {
+              // Update description to show which issue types this field applies to
+              customFieldDescriptions[field.key].push(
+                `${issueType.name}${field.required ? " (Required)" : ""}`
+              );
+              customFields[field.key].description = `${
+                field.name
+              } (Applies to: ${customFieldDescriptions[field.key].join(", ")})`;
+            }
+          });
+        }
+      });
+
+      // Add custom fields to the properties
+      Object.keys(customFields).forEach((key) => {
+        properties[key] = customFields[key];
+      });
+    }
+  }
+
+  // Function to generate a brief summary of available issue types
+  function generateMetadataSummary(metadata: ProjectMetadata) {
+    let summary = "";
+
+    if (metadata.issueTypes && metadata.issueTypes.length > 0) {
+      summary = metadata.issueTypes
+        .map((type) => {
+          let typeSummary = `- ${type.name}`;
+          if (type.description) {
+            typeSummary += `: ${type.description}`;
+          }
+          return typeSummary;
+        })
+        .join("\n");
+    }
+
+    return summary;
+  }
+
   return {
     interpretCommand,
     executeAction,
+    fetchJiraMetadata,
   };
 }

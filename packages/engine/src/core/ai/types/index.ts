@@ -1,4 +1,4 @@
-import { JiraActionParams } from "../jira";
+import { JiraActionParams } from "../../jira";
 
 export interface JiraContext {
   url?: string;
@@ -41,16 +41,31 @@ export interface MoveToEpicParams {
 
 type JiraSingleStepActionParamsType =
   | { actionType: "getIssue"; parameters: JiraActionParams<"getIssue">[0] }
-  | { actionType: "createIssue"; parameters: JiraActionParams<"createIssue">[0] }
-  | { actionType: "updateIssue"; parameters: JiraActionParams<"updateIssue">[0] }
-  | { actionType: "deleteIssue"; parameters: JiraActionParams<"deleteIssue">[0] }
+  | {
+      actionType: "createIssue";
+      parameters: JiraActionParams<"createIssue">[0];
+    }
+  | {
+      actionType: "updateIssue";
+      parameters: JiraActionParams<"updateIssue">[0];
+    }
+  | {
+      actionType: "deleteIssue";
+      parameters: JiraActionParams<"deleteIssue">[0];
+    }
   | { actionType: "addComment"; parameters: JiraActionParams<"addComment">[0] }
-  | { actionType: "assignIssue"; parameters: JiraActionParams<"assignIssue">[0] }
+  | {
+      actionType: "assignIssue";
+      parameters: JiraActionParams<"assignIssue">[0];
+    }
   | {
       actionType: "updateIssueType";
       parameters: JiraActionParams<"updateIssueType">[0];
     }
-  | { actionType: "searchIssues"; parameters: JiraActionParams<"searchIssues">[0] }
+  | {
+      actionType: "searchIssues";
+      parameters: JiraActionParams<"searchIssues">[0];
+    }
   | {
       actionType: "getIssueTransitions";
       parameters: JiraActionParams<"getIssueTransitions">[0];
@@ -73,9 +88,22 @@ type JiraSingleStepActionParamsType =
     }
   | { actionType: "linkIssues"; parameters: JiraActionParams<"linkIssues">[0] }
   | { actionType: "createEpicAndLink"; parameters: CreateEpicAndLinkParams }
-  | { actionType: "createAndLinkSubtasks"; parameters: CreateAndLinkSubtasksParams }
+  | {
+      actionType: "createAndLinkSubtasks";
+      parameters: CreateAndLinkSubtasksParams;
+    }
   | { actionType: "moveToEpic"; parameters: MoveToEpicParams }
-  | { actionType: "message"; parameters: { message: string } }
+  | { actionType: "message"; parameters: { message: string } };
 
-export type JiraActionParamsType =
-  | JiraSingleStepActionParamsType;
+export type JiraActionParamsType = JiraSingleStepActionParamsType;
+
+export interface ToolFunctionProperty {
+  description: string;
+  type: 'string' | 'number' | 'boolean' | 'array' | 'object';
+  additionalProperties?: boolean;
+  enum?: string[];
+  items?: ToolFunctionProperty;
+  name?: string;
+  properties?: Record<string, ToolFunctionProperty>;
+  required?: boolean;
+}

@@ -5,6 +5,7 @@ import { configureCommentOperations } from './operations/comments';
 import { configureTransitionOperations } from './operations/transitions';
 import { configureUserOperations } from './operations/users';
 import { configureProjectOperations } from './operations/projects';
+import { configureMetadataOperations } from './operations/metadata';
 
 export function configureJiraService(config: JiraConfig) {
   // Create the base Jira client
@@ -16,6 +17,7 @@ export function configureJiraService(config: JiraConfig) {
   const transitionOperations = configureTransitionOperations(client);
   const userOperations = configureUserOperations(client);
   const projectOperations = configureProjectOperations(client);
+  const metadataOperations = configureMetadataOperations(client);
   
   // Return a combined API
   return {
@@ -41,7 +43,11 @@ export function configureJiraService(config: JiraConfig) {
     assignIssue: userOperations.assignIssue,
     
     // Project operations
-    getProjectInfo: projectOperations.getProjectInfo
+    getProjectInfo: projectOperations.getProjectInfo,
+
+    // Metadata operations
+    getCreateMetadataIssueTypes: metadataOperations.getCreateMetadataIssueTypes,
+    getCreateFieldMetadata: metadataOperations.getCreateFieldMetadata,
   };
 }
 
