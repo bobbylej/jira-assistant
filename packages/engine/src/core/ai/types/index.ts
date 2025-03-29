@@ -29,7 +29,7 @@ export interface CreateEpicAndLinkParams {
 
 export interface CreateAndLinkSubtasksParams {
   projectKey: string;
-  parentIssueKey: string;
+  parent: string;
   subtasks: { summary: string; description?: string; assignee?: string }[];
 }
 
@@ -99,11 +99,11 @@ export type JiraActionParamsType = JiraSingleStepActionParamsType;
 
 export interface ToolFunctionProperty {
   description: string;
-  type: 'string' | 'number' | 'boolean' | 'array' | 'object';
+  type: 'string' | 'number' | 'boolean' | 'array' | 'object' | 'doc';
   additionalProperties?: boolean;
   enum?: string[];
   items?: ToolFunctionProperty;
   name?: string;
   properties?: Record<string, ToolFunctionProperty>;
-  required?: boolean;
+  default?: any;
 }

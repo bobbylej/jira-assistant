@@ -77,40 +77,6 @@ export const JIRA_TOOLS: ChatCompletionTool[] = [
   {
     type: "function",
     function: {
-      name: "create_issue",
-      description: "Create a new Jira issue",
-      parameters: {
-        type: "object",
-        properties: {
-          projectKey: {
-            type: "string",
-            description: "The project key (e.g., PROJ)",
-          },
-          summary: {
-            type: "string",
-            description: "Issue summary/title",
-          },
-          description: {
-            type: "string",
-            description:
-              "Description of the issue. If provided, it will be enhanced to follow best practices. If not provided, a description will be auto-generated.",
-          },
-          issueType: {
-            type: "string",
-            description: "Type of issue (e.g., Bug, Task, Story)",
-          },
-          parentIssueKey: {
-            type: "string",
-            description: "The key of the parent issue for creating subtasks",
-          },
-        },
-        required: ["projectKey", "summary", "issueType"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
       name: "update_issue_type",
       description: "Update the issue type of an existing Jira issue",
       parameters: {
@@ -325,12 +291,50 @@ export const JIRA_TOOLS: ChatCompletionTool[] = [
   {
     type: "function",
     function: {
+      name: "create_issue",
+      description: "Create a new Jira issue",
+      parameters: {
+        type: "object",
+        properties: {
+          projectKey: {
+            type: "string",
+            description: "The project key (e.g., PROJ)",
+          },
+          summary: {
+            type: "string",
+            description: "Issue summary/title",
+          },
+          description: {
+            type: "string",
+            description:
+              "Description of the issue. If provided, it will be enhanced to follow best practices. If not provided, a description will be auto-generated.",
+          },
+          issueType: {
+            type: "string",
+            description: "Type of issue (e.g., Bug, Task, Story)",
+          },
+          parent: {
+            type: "string",
+            description: "The key of the parent issue for creating subtasks",
+          },
+        },
+        required: ["projectKey", "summary", "issueType"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "update_issue",
       description:
         "Update specific fields of an existing Jira issue. Only fields that are explicitly provided will be updated.",
       parameters: {
         type: "object",
         properties: {
+          projectKey: {
+            type: "string",
+            description: "The project key (e.g., PROJ)",
+          },
           issueKey: {
             type: "string",
             description: "The key of the issue to update (e.g., PROJ-123)",

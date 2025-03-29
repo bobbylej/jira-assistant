@@ -1,7 +1,11 @@
 import { OpenAI } from "openai";
 import { JIRA_TOOLS, SYSTEM_PROMPT } from "../../adapters/openai/prompts";
 import { logger } from "../../utils/logger";
-import { JiraService, ProjectMetadata } from "../jira";
+import {
+  IssueTypeMetadata,
+  JiraService,
+  ProjectMetadata,
+} from "../jira";
 import {
   ChatMessage,
   CreateAndLinkSubtasksParams,
@@ -14,6 +18,7 @@ import {
 import {
   convertJiraContextToText,
   createEnhancedPrompt,
+  generateDocFieldDescription,
 } from "./utils/prompts.utils";
 import { ChatCompletionTool } from "openai/resources";
 
@@ -119,7 +124,14 @@ export function configureCommandService(
       let metadataInfo = "";
       if (context?.projectKey) {
         const projectMetadata = await fetchJiraMetadata(context.projectKey);
-        logger.info("Project metadata:", projectMetadata);
+        // logger.info(
+        //   "Project metadata:",
+        //   JSON.stringify(
+        //     projectMetadata?.issueTypes.find(
+        //       (issueType) => issueType.name === "Bug"
+        //     )
+        //   )
+        // );
         if (projectMetadata) {
           // Update the tools with the metadata
           jiraTools = updateToolsWithMetadata(jiraTools, projectMetadata);
@@ -129,7 +141,12 @@ export function configureCommandService(
         }
       }
       // logger.info("---------------------------------");
-      // logger.info("Jira tools:", JSON.stringify(jiraTools, null, 2));
+      // logger.info(
+      //   "Jira tools:",
+      //   JSON.stringify(
+      //     jiraTools.find((tool) => tool.function.name === "create_bug")
+      //   )
+      // );
       // logger.info("---------------------------------");
       // logger.info("Metadata info:", metadataInfo);
       // logger.info("---------------------------------");
@@ -156,7 +173,7 @@ export function configureCommandService(
       const message = response.choices[0].message;
 
       // Handle tool calls
-      logger.info("Tool calls:", message.tool_calls);
+      logger.info("Tool calls:", JSON.stringify(message.tool_calls));
       const actions = message.tool_calls?.map((toolCall) => {
         const functionName = toolCall.function.name;
         const args = JSON.parse(toolCall.function.arguments);
@@ -239,6 +256,20 @@ export function configureCommandService(
               approveRequired: true,
             };
           case "update_issue":
+            return {
+              actionType: "updateIssue",
+              parameters: args,
+              approveRequired: true,
+            };
+        }
+        switch (true) {
+          case functionName.startsWith("create"):
+            return {
+              actionType: "createIssue",
+              parameters: args,
+              approveRequired: true,
+            };
+          case functionName.startsWith("update"):
             return {
               actionType: "updateIssue",
               parameters: args,
@@ -513,18 +544,18 @@ export function configureCommandService(
     try {
       // Create multiple subtasks for a parent issue
       logger.info(
-        `Creating ${params.subtasks.length} subtasks for parent issue ${params.parentIssueKey}`
+        `Creating ${params.subtasks.length} subtasks for parent issue ${params.parent}`
       );
 
       // Get parent issue details to use the same project
       const { data: parentIssue } = await jiraService.getIssue({
-        issueKey: params.parentIssueKey,
+        issueKey: params.parent,
       });
 
       if (!parentIssue) {
         return {
           success: false,
-          message: `Failed to get parent issue ${params.parentIssueKey}`,
+          message: `Failed to get parent issue ${params.parent}`,
         };
       }
 
@@ -556,9 +587,9 @@ export function configureCommandService(
               projectKey,
               summary: subtask.summary,
               description:
-                subtask.description || `Subtask for ${params.parentIssueKey}`,
+                subtask.description || `Subtask for ${params.parent}`,
               issueType: "Sub-task",
-              parentIssueKey: params.parentIssueKey,
+              parent: params.parent,
             });
 
           if (success && subtaskResult) {
@@ -595,9 +626,7 @@ export function configureCommandService(
       if (createdSubtasks.length > 0) {
         resultMessage += `Successfully created ${
           createdSubtasks.length
-        } subtasks for ${params.parentIssueKey}: ${createdSubtasks.join(
-          ", "
-        )}. `;
+        } subtasks for ${params.parent}: ${createdSubtasks.join(", ")}. `;
       }
 
       if (failedSubtasks.length > 0) {
@@ -868,129 +897,312 @@ Please improve this description following these best practices:
     metadata: ProjectMetadata
   ) {
     // Create a deep copy of the tools array to avoid modifying the original
-    const updatedTools = [...tools];
+    const updatedTools = JSON.parse(
+      JSON.stringify(tools)
+    ) as ChatCompletionTool[];
 
-    // Find the create_issue and update_issue tools
-    const toolToCreateIssue = updatedTools.find(
+    // Find and remove the generic create_issue and update_issue tools
+    const createIssueIndex = updatedTools.findIndex(
       (tool) =>
         tool.type === "function" && tool.function.name === "create_issue"
     );
 
-    const toolToUpdateIssue = updatedTools.find(
+    const updateIssueIndex = updatedTools.findIndex(
       (tool) =>
         tool.type === "function" && tool.function.name === "update_issue"
     );
 
-    if (toolToCreateIssue) {
-      // Update the create_issue tool with metadata
-      updateIssueTool(toolToCreateIssue, metadata);
+    // Store the original tools before removing them
+    const originalCreateIssueTool =
+      createIssueIndex >= 0 ? updatedTools[createIssueIndex] : null;
+    const originalUpdateIssueTool =
+      updateIssueIndex >= 0 ? updatedTools[updateIssueIndex] : null;
+
+    // Remove the original tools (if found)
+    if (createIssueIndex >= 0) {
+      updatedTools.splice(createIssueIndex, 1);
     }
 
-    if (toolToUpdateIssue) {
-      // Update the update_issue tool with metadata
-      updateIssueTool(toolToUpdateIssue, metadata);
+    if (updateIssueIndex >= 0) {
+      updatedTools.splice(
+        updateIssueIndex > createIssueIndex
+          ? updateIssueIndex - 1
+          : updateIssueIndex,
+        1
+      );
+    }
+
+    // If we have issue types metadata, create specific tools for each type
+    if (metadata.issueTypes && metadata.issueTypes.length > 0) {
+      metadata.issueTypes.forEach((issueType) => {
+        // Create a tool for creating this specific issue type
+        if (originalCreateIssueTool) {
+          const createTool = createIssueTypeSpecificTool(
+            originalCreateIssueTool,
+            issueType,
+            "create",
+            metadata.projectKey
+          );
+          updatedTools.push(createTool);
+        }
+
+        // Create a tool for updating to this specific issue type
+        if (originalUpdateIssueTool) {
+          const updateTool = createIssueTypeSpecificTool(
+            originalUpdateIssueTool,
+            issueType,
+            "update",
+            metadata.projectKey
+          );
+          updatedTools.push(updateTool);
+        }
+      });
+    } else {
+      // If no metadata, add back the original tools
+      if (originalCreateIssueTool) {
+        updatedTools.push(originalCreateIssueTool);
+      }
+
+      if (originalUpdateIssueTool) {
+        updatedTools.push(originalUpdateIssueTool);
+      }
     }
 
     return updatedTools;
   }
 
-  // Function to update the create_issue tool
-  function updateIssueTool(
-    tool: ChatCompletionTool,
-    metadata: ProjectMetadata
+  // Function to create an issue type specific tool
+  function createIssueTypeSpecificTool(
+    originalTool: ChatCompletionTool,
+    issueType: IssueTypeMetadata,
+    action: "create" | "update",
+    projectKey: string
   ) {
-    const properties: Record<string, ToolFunctionProperty> =
-      (tool.function.parameters?.properties as Record<
-        string,
-        ToolFunctionProperty
-      >) || {};
+    // Create a deep copy of the original tool
+    const newTool = JSON.parse(JSON.stringify(originalTool));
 
-    // Update the issueType property with available issue types
-    if (metadata.issueTypes.length > 0) {
-      const issueTypeNames = metadata.issueTypes.map((type) => type.name);
-      properties.issueType.enum = issueTypeNames;
-      properties.issueType.description = `Type of issue. Available types: ${issueTypeNames.join(
-        ", "
-      )}`;
+    // Set the name and description based on the action and issue type
+    const typeName = issueType.name.toLowerCase().replace(/\s+/g, "_");
+    if (action === "create") {
+      newTool.function.name = `create_${typeName}`;
+      newTool.function.description = `Create a new ${issueType.name} in Jira${
+        issueType.description ? ` (${issueType.description})` : ""
+      }`;
+    } else {
+      newTool.function.name = `update_${typeName}`;
+      newTool.function.description = `Update ${issueType.name} in Jira${
+        issueType.description ? ` (${issueType.description})` : ""
+      }`;
+    }
 
-      // Add custom fields based on all issue types
-      const customFields: Record<string, ToolFunctionProperty> = {};
-      const customFieldDescriptions: Record<string, string[]> = {};
+    // Set project key as fixed value
+    newTool.function.parameters.properties.projectKey = {
+      type: "string",
+      description: "The project key (e.g., PROJ)",
+      default: projectKey,
+    };
 
-      metadata.issueTypes.forEach((issueType) => {
-        if (issueType.fields && issueType.fields.length > 0) {
-          issueType.fields.forEach((field) => {
-            // Skip standard fields that are already in the schema
-            if (
-              ["summary", "description", "issuetype", "project"].includes(
-                field.key
-              )
-            ) {
-              return;
-            }
+    // Set one choice for issueType
+    newTool.function.parameters.properties.issueType = {
+      type: "string",
+      description: "The type of issue",
+      enum: [issueType.name],
+      default: issueType.name,
+    };
 
-            // Add custom field
-            if (!customFields[field.key]) {
-              let fieldType: ToolFunctionProperty["type"];
-              switch (field.schema.type) {
-                case "number":
-                case "integer":
-                  fieldType = "number";
-                  break;
-                default:
-                  fieldType =
-                    (field.schema.type as ToolFunctionProperty["type"]) ||
-                    "string";
-                  break;
+    // Remove parent if this is not a subtask
+    if (!issueType.subtask) {
+      delete newTool.function.parameters.properties.parent;
+    } else {
+      // Make parent required for subtasks
+      newTool.function.parameters.required.push("parent");
+    }
+
+    // Add custom fields based on the issue type's fields
+    if (issueType.fields && issueType.fields.length > 0) {
+      issueType.fields.forEach((field) => {
+        // Skip standard fields that are already in the schema or will be auto-filled
+        const fieldsToSkip = [
+          "summary",
+          "issuetype",
+          "project",
+          "parent",
+          "reporter",
+          "team",
+        ];
+        if (fieldsToSkip.includes(field.key)) {
+          return;
+        }
+
+        // Determine the appropriate field type based on Jira's schema
+        let fieldType = "string"; // Default type
+        let itemsType = "string"; // Default items type for arrays
+        let itemsTypeDescription = "";
+
+        if (field.schema) {
+          // Map Jira schema types to JSON Schema types
+          switch (field.schema.type) {
+            case "number":
+            case "integer":
+              fieldType = field.schema.type;
+              break;
+            case "array":
+              fieldType = "array";
+              // Handle different array item types
+              if (field.schema.items) {
+                // Keep track of the original Jira type for description
+                itemsType = field.schema.items;
+
+                // Special handling for issuelinks in arrays
+                if (field.schema.items === "issuelinks") {
+                  itemsType = "string";
+                  itemsTypeDescription = "Use issue key (e.g., PROJ-123)";
+                }
               }
+              break;
+            case "boolean":
+              fieldType = "boolean";
+              break;
+            case "issuelinks":
+              fieldType = "string";
+              break;
+            case "user":
+            case "group":
+            case "version":
+            case "component":
+            case "option":
+            case "priority":
+            case "resolution":
+              // These are all string-based IDs in the API
+              fieldType = "string";
+              break;
+            case "datetime":
+            case "date":
+              // Dates are passed as strings in ISO format
+              fieldType = "string";
+              break;
+            default:
+              // Default to string for any other types
+              fieldType = "string";
+          }
+        }
 
-              customFields[field.key] = {
-                name: field.key,
-                type: fieldType,
-                description: `${field.name} (${issueType.name}${
-                  field.required ? ", Required" : ""
-                })`,
-                required: field.required,
+        // Create the field property
+        const fieldProperty: ToolFunctionProperty = {
+          type: fieldType as any,
+          description: `${field.name}${field.required ? " (Required)" : ""}${
+            field.schema
+              ? ` [${field.schema.type}${
+                  field.schema.type === "array" ? ` of ${itemsType}` : ""
+                }]`
+              : ""
+          }`,
+          default: field.defaultValue,
+        };
+
+        // Add more specific information based on field type
+        if (field.schema) {
+          switch (field.schema.type) {
+            case "user":
+              fieldProperty.description += ` - Use account ID from get_project_users`;
+              break;
+            case "array":
+              fieldProperty.items = {
+                type: "string",
+                description: `Items of type ${itemsType}${
+                  itemsTypeDescription ? ` - ${itemsTypeDescription}` : ""
+                }`,
               };
+              break;
+            case "datetime":
+              fieldProperty.description += ` - Use ISO format (YYYY-MM-DDTHH:MM:SS.sssZ)`;
+              break;
+            case "date":
+              fieldProperty.description += ` - Use ISO format (YYYY-MM-DD)`;
+              break;
+            case "issuelinks":
+              fieldProperty.description += ` - Use issue key (e.g., PROJ-123)`;
+              break;
+            case "doc":
+              fieldProperty.description += generateDocFieldDescription(field, action);
+              break;
+          }
+        }
 
-              // If it's an array, specify the items type
-              if (fieldType === "array" && field.schema && field.schema.items) {
-                logger.info("Field schema:", field.schema);
-                customFields[field.key].items = {
-                  type: "string",
-                  description: "Items in the array",
-                };
-              }
+        const isDocField =
+          field.defaultValue &&
+          typeof field.defaultValue === "object" &&
+          "type" in field.defaultValue &&
+          field.defaultValue.type === "doc";
+        if (isDocField) {
+          fieldProperty.description += generateDocFieldDescription(field, action);
+        }
 
-              // If there are allowed values, add them as enum
-              if (field.allowedValues && field.allowedValues.length > 0) {
-                customFields[field.key].enum = field.allowedValues.map(
-                  (value) => value.toString()
-                );
-              }
+        // If there's an autocomplete URL, mention it in the description
+        if (field.autoCompleteUrl) {
+          fieldProperty.description += ` - Values can be looked up via API at ${field.autoCompleteUrl}`;
+        }
 
-              // Track which issue types this field applies to
-              customFieldDescriptions[field.key] = [
-                `${issueType.name}${field.required ? " (Required)" : ""}`,
-              ];
-            } else {
-              // Update description to show which issue types this field applies to
-              customFieldDescriptions[field.key].push(
-                `${issueType.name}${field.required ? " (Required)" : ""}`
-              );
-              customFields[field.key].description = `${
-                field.name
-              } (Applies to: ${customFieldDescriptions[field.key].join(", ")})`;
+        // If there are allowed values, add them as enum
+        if (field.allowedValues && field.allowedValues.length > 0) {
+          const enumValues = field.allowedValues.map((v) => {
+            // Handle different formats of allowed values
+            if (Array.isArray(v)) {
+              return v.join(", ");
             }
+            if (typeof v === "object") {
+              const value = v as any;
+              return value.name || value.value || value.key || value.id;
+            }
+            return String(v);
           });
+
+          // Get details about the allowed values if they are objects
+          const allowedValuesDetails = field.allowedValues.map((v) => {
+            if (typeof v === "object") {
+              const value = v as any;
+              return {
+                ...(value.name ? { name: value.name} : {}),
+                ...(value.value ? { value: value.value} : {}),
+                ...(value.key ? { key: value.key} : {}),
+                ...(value.id ? { id: value.id} : {}),
+                ...(value.description ? { description: value.description} : {}),
+              };
+            }
+          }).filter((v) => !!v);
+
+          const allowedValuesDescription = allowedValuesDetails.length > 0 ? ` - Details about allowed values: ${allowedValuesDetails.map((v) => {
+            if (typeof v === "object") {
+              return `\n\`\`\`\n${JSON.stringify(v)}\n\`\`\`\n`;
+            }
+            return v;
+          }).join("")}` : "";
+
+          if (fieldType === "array") {
+            if (fieldProperty.items) {
+              fieldProperty.items.enum = enumValues;
+              fieldProperty.items.description += allowedValuesDescription;
+            }
+          } else {
+            fieldProperty.enum = enumValues;
+            fieldProperty.description += allowedValuesDescription;
+          }
+        }
+
+        // Add the field to the properties
+        newTool.function.parameters.properties[field.key] = fieldProperty;
+
+        // If the field is required, add it to the required array
+        if (
+          field.required &&
+          !newTool.function.parameters.required.includes(field.key)
+        ) {
+          newTool.function.parameters.required.push(field.key);
         }
       });
-
-      // Add custom fields to the properties
-      Object.keys(customFields).forEach((key) => {
-        properties[key] = customFields[key];
-      });
     }
+
+    return newTool;
   }
 
   // Function to generate a brief summary of available issue types

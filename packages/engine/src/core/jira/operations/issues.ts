@@ -9,6 +9,7 @@ import {
 import { jiraRequest } from "../client";
 import { logger } from "../../../utils/logger";
 import { formatDescription } from "../utils/description.utils";
+import { CreateIssueParams } from "../types/issues.type";
 
 export function configureIssueOperations(client: JiraClient) {
   async function getIssue({
@@ -56,19 +57,9 @@ export function configureIssueOperations(client: JiraClient) {
     projectKey,
     summary,
     description,
-    issueType = "Task",
-    priority,
-    assignee,
-    parentIssueKey
-  }: {
-    projectKey: string;
-    summary: string;
-    description?: string;
-    issueType?: string;
-    priority?: string;
-    assignee?: string;
-    parentIssueKey?: string;
-  }): Promise<SingleIssueJiraResponse> {
+    issueType,
+    ...rest
+  }: CreateIssueParams): Promise<SingleIssueJiraResponse> {
     logger.info(`Creating issue in project ${projectKey}: ${summary}`);
 
     // Format the description (it's already been enhanced by the AI if needed)
@@ -93,26 +84,11 @@ export function configureIssueOperations(client: JiraClient) {
       issueData.fields.description = formattedDescription;
     }
 
-    // Add priority if provided
-    if (priority) {
-      issueData.fields.priority = {
-        name: priority,
-      };
-    }
+    Object.entries(rest).forEach(([key, value]) => {
+      issueData.fields[key] = value;
+    });
 
-    // Add assignee if provided
-    if (assignee) {
-      issueData.fields.assignee = {
-        id: assignee,
-      };
-    }
-
-    // Add parent issue key if provided
-    if (parentIssueKey) {
-      issueData.fields.parent = {
-        key: parentIssueKey
-      };
-    }
+    logger.info(`Issue data: ${JSON.stringify(issueData, null, 2)}`);
 
     const response = await jiraRequest<{
       id: string;
