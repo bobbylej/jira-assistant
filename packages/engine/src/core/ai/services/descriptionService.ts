@@ -1,4 +1,4 @@
-import { OpenAI } from "openai";
+import { AIProvider } from "../../../adapters/ai/types";
 import { logger } from "../../../utils/logger";
 import { JiraContext } from "../types";
 
@@ -18,7 +18,7 @@ export interface DescriptionService {
   ) => Promise<string>;
 }
 
-export function configureDescriptionService(openai: OpenAI): DescriptionService {
+export function configureDescriptionService(aiClient: AIProvider): DescriptionService {
   // Function to generate AI-powered descriptions
   async function generateAIDescription(
     issueType: string,
@@ -111,7 +111,7 @@ Remember that Tasks should have titles that start with a verb (e.g., "Build", "C
 
       logger.info("[INFO] Generated prompt:", prompt);
       // Call the AI to generate the description
-      const response = await openai.chat.completions.create({
+      const response = await aiClient.createChatCompletion({
         model: "gpt-4-turbo",
         messages: [
           {
@@ -217,7 +217,7 @@ Please improve this description following these best practices:
       logger.info("[INFO] Generated enhancement prompt:", prompt);
 
       // Call the AI to enhance the description
-      const response = await openai.chat.completions.create({
+      const response = await aiClient.createChatCompletion({
         model: "gpt-4-turbo",
         messages: [
           {

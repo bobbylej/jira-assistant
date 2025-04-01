@@ -15,4 +15,18 @@ export interface EngineConfig {
   jiraApiToken: string;
   logsDir: string;
   dataDir: string;
+}
+
+export interface AIConfig {
+  provider: 'openai' | 'gemini' | 'anthropic' | 'ollama';
+  apiKey: string;
+  // Other common AI configuration options
+}
+
+export interface OpenAIConfig extends AIConfig {
+  // OpenAI specific configuration
+}
+
+export interface GeminiConfig extends AIConfig {
+  // Gemini specific configuration
 } 
