@@ -9,17 +9,18 @@ import { configureCommandInterpreter } from "./services/commandInterpreter";
 import { configureActionExecutor } from "./services/actionExecutor";
 import { configureMetadataService } from "./services/metadataService";
 import { configureDescriptionService } from "./services/descriptionService";
+import { AIProvider } from "../../adapters/ai/types";
 
 export function configureCommandService(
-  openai: OpenAI,
+  aiClient: AIProvider,
   jiraService: JiraService
 ) {
   // Configure the individual services
   const metadataService = configureMetadataService(jiraService);
-  const descriptionService = configureDescriptionService(openai);
+  const descriptionService = configureDescriptionService(aiClient);
   const actionExecutor = configureActionExecutor(jiraService, descriptionService);
   const commandInterpreter = configureCommandInterpreter(
-    openai,
+    aiClient,
     metadataService,
   );
 

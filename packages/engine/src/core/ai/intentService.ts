@@ -1,14 +1,13 @@
-import { OpenAI } from 'openai';
+import { AIProvider } from '../../adapters/ai/types';
 import { SYSTEM_PROMPT } from '../../adapters/openai/prompts';
 import { logger } from '../../utils/logger';
 
-export function configureIntentService(openai: OpenAI) {
+export function configureIntentService(aiClient: AIProvider) {
   async function determineIntent(text: string) {
     try {
       logger.info('Determining intent for text:', text);
       
-      const response = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
+      const response = await aiClient.createChatCompletion({
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: text }

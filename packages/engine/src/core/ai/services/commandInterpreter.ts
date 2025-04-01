@@ -1,19 +1,17 @@
 import { OpenAI } from "openai";
 import { JIRA_TOOLS, SYSTEM_PROMPT } from "../../../adapters/openai/prompts";
 import { logger } from "../../../utils/logger";
-import {
-  ChatMessage,
-  JiraContext,
-} from "../types";
+import { ChatMessage, JiraContext } from "../types";
 import {
   convertJiraContextToText,
   createEnhancedPrompt,
 } from "../utils/prompts.utils";
 import { MetadataService } from "./metadataService";
+import { AIProvider } from "../../../adapters/ai/types";
 
 export function configureCommandInterpreter(
-  openai: OpenAI,
-  metadataService: MetadataService,
+  aiClient: AIProvider,
+  metadataService: MetadataService
 ) {
   async function interpretCommand(
     text: string,
@@ -40,20 +38,39 @@ export function configureCommandInterpreter(
       // Fetch relevant Jira metadata if context contains project info
       let metadataInfo = "";
       if (context?.projectKey) {
-        const projectMetadata = await metadataService.fetchJiraMetadata(context.projectKey);
-        
+        const projectMetadata = await metadataService.fetchJiraMetadata(
+          context.projectKey
+        );
+
         if (projectMetadata) {
           // Update the tools with the metadata
-          jiraTools = metadataService.updateToolsWithMetadata(jiraTools, projectMetadata);
+          jiraTools = metadataService.updateToolsWithMetadata(
+            jiraTools,
+            projectMetadata
+          );
 
           // Also include a brief summary of available issue types in the prompt
-          metadataInfo = metadataService.generateMetadataSummary(projectMetadata);
+          metadataInfo =
+            metadataService.generateMetadataSummary(projectMetadata);
         }
       }
 
-      // Call OpenAI with the enhanced prompt and tools
-      const response = await openai.chat.completions.create({
-        model: "gpt-4-turbo",
+      logger.info(
+        "Message to send to OpenAI:",
+        JSON.stringify([
+          { role: "system", content: SYSTEM_PROMPT },
+          ...(chatHistory || []),
+          {
+            role: "user",
+            content: metadataInfo
+              ? `${enhancedPrompt}\n\nAvailable Jira issue types:\n${metadataInfo}`
+              : enhancedPrompt,
+          },
+        ])
+      );
+
+      // Call AI with the enhanced prompt and tools
+      const response = await aiClient.createChatCompletion({
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           ...(chatHistory || []),
@@ -202,4 +219,4 @@ export function configureCommandInterpreter(
   return {
     interpretCommand,
   };
-} 
+}

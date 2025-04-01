@@ -1,9 +1,9 @@
-import { OpenAI } from 'openai';
+import { AIProvider } from '../../adapters/ai/types';
 import fs from 'fs';
 import path from 'path';
 import { logger } from '../../utils/logger';
 
-export function configureTranscriptionService(openai: OpenAI, config: any) {
+export function configureTranscriptionService(aiClient: AIProvider, config: any) {
   async function transcribeAudio(audioBuffer: Buffer): Promise<string> {
     try {
       logger.info('Transcribing audio...');
@@ -12,11 +12,13 @@ export function configureTranscriptionService(openai: OpenAI, config: any) {
       const tempFilePath = path.join(config.tempDir || '/tmp', `recording-${Date.now()}.wav`);
       fs.writeFileSync(tempFilePath, audioBuffer);
       
-      // Transcribe using OpenAI
-      const transcription = await openai.audio.transcriptions.create({
-        file: fs.createReadStream(tempFilePath),
-        model: "whisper-1",
-      });
+      // Transcribe using AI provider
+      const transcription = await aiClient.transcribeAudio(
+        { 
+          path: tempFilePath,
+          type: 'audio/wav'
+        }
+      );
       
       // Clean up temp file
       fs.unlinkSync(tempFilePath);

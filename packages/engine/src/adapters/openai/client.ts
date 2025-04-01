@@ -1,10 +1,9 @@
-import { OpenAI } from 'openai';
 import { OpenAIConfig } from '../../config/types';
+import { createAIClient } from '../ai/client';
+import { AIProvider } from '../ai/types';
 
-export function createOpenAIClient(config: OpenAIConfig) {
-  const client = new OpenAI({
-    apiKey: config.apiKey
+export function createOpenAIClient(config: OpenAIConfig): AIProvider {
+  return createAIClient(config.provider, {
+    apiKey: config.apiKey,
   });
-  
-  return client;
 } 
