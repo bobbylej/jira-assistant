@@ -92,7 +92,7 @@ export function configureCommandInterpreter(
       logger.info("Tool calls:", JSON.stringify(message.tool_calls));
       const actions = message.tool_calls?.map((toolCall) => {
         const functionName = toolCall.function.name;
-        const args = JSON.parse(toolCall.function.arguments);
+        const args = toolCall.function.arguments;
 
         logger.info(`Tool call: ${functionName}`, args);
 

@@ -31,7 +31,7 @@ export function configureGeminiAdapter(config: AIModelConfig): AIProvider {
         boolean: Type.BOOLEAN,
         array: Type.ARRAY,
         doc: Type.OBJECT,
-      }[type] || Type.TYPE_UNSPECIFIED
+      }[type] || Type.STRING
     );
   }
 
@@ -88,7 +88,7 @@ export function configureGeminiAdapter(config: AIModelConfig): AIProvider {
               ToolFunctionProperty
             >
           ),
-          required: tool.function.parameters?.required as string[],
+          required: tool.function.parameters?.required as string[] || [],
         },
       })) || []
     );
@@ -101,6 +101,7 @@ export function configureGeminiAdapter(config: AIModelConfig): AIProvider {
       // Convert OpenAI format messages to Gemini format
       const contents = convertMessagesToGeminiFormat(params.messages);
       const tools = convertToolsToGeminiFormat(params.tools);
+      console.log("tools", JSON.stringify(tools));
 
       // Handle system message specially since Gemini doesn't have a system role
       const systemMessage = params.messages.find(
@@ -125,8 +126,10 @@ export function configureGeminiAdapter(config: AIModelConfig): AIProvider {
       // Convert Gemini response to OpenAI format
       const toolCalls = response.functionCalls?.map((functionCall) => {
         return {
-          name: functionCall.name,
-          arguments: functionCall.args,
+          function: {
+            name: functionCall.name,
+            arguments: functionCall.args,
+          },
         };
       });
 
