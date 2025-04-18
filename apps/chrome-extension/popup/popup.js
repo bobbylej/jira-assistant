@@ -75,9 +75,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const chatHistory = await getChatHistory();
     displayMessages(chatHistory);
     console.log("Loaded chat history", chatHistory);
-    
+
     await updateActionStatusesInDOM();
-    
+
     addEventListenersForIssueElements();
     addEventListenersForActionButtons();
   }
@@ -86,39 +86,43 @@ document.addEventListener("DOMContentLoaded", () => {
     // Load action statuses
     const actionStatuses = await loadActionStatuses();
     console.log("Action statuses:", actionStatuses);
-    
+
     // Apply statuses to action buttons
     Object.entries(actionStatuses).forEach(([actionId, status]) => {
-      const button = document.querySelector(`.approve-action-btn[data-action-id="${actionId}"]`);
+      const button = document.querySelector(
+        `.approve-action-btn[data-action-id="${actionId}"]`
+      );
       if (button) {
-        const actionMessage = button.closest('.action-message');
-        
-        if (status.status === 'completed') {
+        const actionMessage = button.closest(".action-message");
+
+        if (status.status === "completed") {
           // Apply completed styling
-          if (actionMessage) actionMessage.classList.add('action-success');
+          if (actionMessage) actionMessage.classList.add("action-success");
           button.textContent = "Completed ✓";
-          button.classList.add('action-completed');
+          button.classList.add("action-completed");
           button.disabled = true;
-          
+
           // Add status message if not already present
-          if (!button.parentNode.querySelector('.action-status')) {
-            const statusMessage = document.createElement('div');
-            statusMessage.classList.add('action-status');
+          if (!button.parentNode.querySelector(".action-status")) {
+            const statusMessage = document.createElement("div");
+            statusMessage.classList.add("action-status");
             statusMessage.innerHTML = `<span class="status-success">Successfully executed</span>`;
             button.parentNode.appendChild(statusMessage);
           }
-        } 
-        else if (status.status === 'failed') {
+        } else if (status.status === "failed") {
           // Apply failed styling
-          if (actionMessage) actionMessage.classList.add('action-failure');
+          if (actionMessage) actionMessage.classList.add("action-failure");
           button.textContent = "Try again";
-          button.classList.add('action-failed');
-          
+          button.classList.add("action-failed");
+          button.disabled = false;
+
           // Add status message if not already present
-          if (!button.parentNode.querySelector('.action-status')) {
-            const statusMessage = document.createElement('div');
-            statusMessage.classList.add('action-status');
-            statusMessage.innerHTML = `<span class="status-error">Error: ${status.error || 'Unknown error'}</span>`;
+          if (!button.parentNode.querySelector(".action-status")) {
+            const statusMessage = document.createElement("div");
+            statusMessage.classList.add("action-status");
+            statusMessage.innerHTML = `<span class="status-error">Error: ${
+              status.error || "Unknown error"
+            }</span>`;
             button.parentNode.appendChild(statusMessage);
           }
         }
@@ -229,12 +233,12 @@ document.addEventListener("DOMContentLoaded", () => {
             await handleAction(action);
           });
 
-          const actionsToApprove = data.action.parameters.actions.filter(
-            (action) => action.approveRequired
-          ).map((action) => ({
-            ...action,
-            id: generateActionId(),
-          }));
+          const actionsToApprove = data.action.parameters.actions
+            .filter((action) => action.approveRequired)
+            .map((action) => ({
+              ...action,
+              id: generateActionId(),
+            }));
           await addMessage(
             "assistant",
             `Review and approve the following actions before executing them.`,
@@ -254,7 +258,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Add a utility function to generate unique IDs
   function generateActionId() {
-    return 'action_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    return (
+      "action_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9)
+    );
   }
 
   // Store actions in memory with their IDs
@@ -262,67 +268,71 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function addActionToDOM(action) {
     const messageElement = document.createElement("div");
-    messageElement.classList.add("message", "assistant-message", "action-message");
-    
+    messageElement.classList.add(
+      "message",
+      "assistant-message",
+      "action-message"
+    );
+
     // Store the action in our map
     pendingActions.set(action.id, action);
-    
+
     // Create action header with humanized action type
     const actionHeader = document.createElement("div");
     actionHeader.classList.add("action-header");
-    
+
     // Convert camelCase to Title Case with spaces
     const humanizedActionType = action.actionType
-      .replace(/([A-Z])/g, ' $1')
-      .replace(/^./, str => str.toUpperCase());
-    
+      .replace(/([A-Z])/g, " $1")
+      .replace(/^./, (str) => str.toUpperCase());
+
     actionHeader.innerHTML = `<strong>${humanizedActionType}</strong>`;
     messageElement.appendChild(actionHeader);
-    
+
     // Create parameters section
     const paramsContainer = document.createElement("div");
     paramsContainer.classList.add("action-parameters");
-    
+
     // Display each parameter in a readable format
     Object.entries(action.parameters).forEach(([key, value]) => {
       const paramRow = document.createElement("div");
       paramRow.classList.add("param-row");
-      
+
       // Convert camelCase parameter name to readable format
       const readableKey = key
-        .replace(/([A-Z])/g, ' $1')
-        .replace(/^./, str => str.toUpperCase());
-      
-      let valueDisplay = '';
-      
+        .replace(/([A-Z])/g, " $1")
+        .replace(/^./, (str) => str.toUpperCase());
+
+      let valueDisplay = "";
+
       // Format the value based on its type
-      if (typeof value === 'object' && value !== null) {
+      if (typeof value === "object" && value !== null) {
         valueDisplay = `<pre>${JSON.stringify(value, null, 2)}</pre>`;
       } else {
         valueDisplay = String(value);
       }
-      
+
       paramRow.innerHTML = `<span class="param-name">${readableKey}:</span> <span class="param-value">${valueDisplay}</span>`;
       paramsContainer.appendChild(paramRow);
     });
-    
+
     messageElement.appendChild(paramsContainer);
-    
+
     // Add approve button
     const approveButton = document.createElement("button");
     approveButton.classList.add("approve-action-btn");
     approveButton.textContent = "Approve & Execute";
     approveButton.setAttribute("data-action-id", action.id);
-    
+
     // Add button container
     const buttonContainer = document.createElement("div");
     buttonContainer.classList.add("action-buttons");
     buttonContainer.appendChild(approveButton);
     messageElement.appendChild(buttonContainer);
-    
+
     chatMessages.appendChild(messageElement);
     chatMessages.scrollTop = chatMessages.scrollHeight;
-    
+
     return action.id;
   }
 
@@ -380,11 +390,15 @@ document.addEventListener("DOMContentLoaded", () => {
   async function saveMessageToStorage(role, content, data = {}) {
     try {
       const chatHistory = await getChatHistory();
-      console.log("Saving message to storage:", { role, content, data }, chatHistory);
-      
+      console.log(
+        "Saving message to storage:",
+        { role, content, data },
+        chatHistory
+      );
+
       // Create a new message object
       const newMessage = { role, content, data };
-      
+
       // Add to chat history
       chatHistory.push(newMessage);
 
@@ -523,20 +537,20 @@ document.addEventListener("DOMContentLoaded", () => {
     chatMessages.querySelectorAll(".approve-action-btn").forEach((button) => {
       const newButton = button.cloneNode(true);
       button.parentNode.replaceChild(newButton, button);
-      
-      newButton.addEventListener("click", function() {
+
+      newButton.addEventListener("click", function () {
         const actionId = this.getAttribute("data-action-id");
         const action = pendingActions.get(actionId);
-        
+
         if (!action) {
           console.error("Action not found:", actionId);
           return;
         }
-        
+
         // Disable the button to prevent multiple clicks
         this.disabled = true;
         this.textContent = "Executing...";
-        
+
         // Execute the action
         handleAction(action, actionId);
       });
@@ -545,8 +559,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function handleAction(action, actionId) {
     // Find the button using the action ID
-    const actionButton = document.querySelector(`.approve-action-btn[data-action-id="${actionId}"]`);
-    
+    const actionButton = document.querySelector(
+      `.approve-action-btn[data-action-id="${actionId}"]`
+    );
+
     switch (action.actionType) {
       case "message":
       case "error":
@@ -573,32 +589,34 @@ document.addEventListener("DOMContentLoaded", () => {
 
           console.log("executeData:", executeData);
 
-          if (executeData.result) {            
-            // Save the success status to storage
-            await saveActionStatus(actionId, {
-              status: 'completed',
-              timestamp: Date.now()
-            });
-            
-            // Remove the action from pending actions
-            pendingActions.delete(actionId);
-            
-            addMessage(
-              "assistant",
-              executeData.result.message,
-              executeData.result.data
-            );
+          if (!executeData.success) {
+            throw new Error(executeData.error);
           }
+
+          // Save the success status to storage
+          await saveActionStatus(actionId, {
+            status: "completed",
+            timestamp: Date.now(),
+          });
+
+          // Remove the action from pending actions
+          pendingActions.delete(actionId);
+
+          addMessage(
+            "assistant",
+            executeData.message,
+            executeData.data
+          );
         } catch (error) {
           console.error("Error executing action:", error);
-          
+
           // Save the failure status to storage
           await saveActionStatus(actionId, {
-            status: 'failed',
+            status: "failed",
             error: error.message,
-            timestamp: Date.now()
+            timestamp: Date.now(),
           });
-          
+
           addMessage("assistant", `Error executing action: ${error.message}`);
         } finally {
           if (actionButton) {
@@ -611,7 +629,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function refreshEventListeners() {
     // Call this function whenever you need to refresh all event listeners
     addEventListenersForIssueElements();
-    
+
     // Also refresh action approval buttons
     addEventListenersForActionButtons();
   }
@@ -786,18 +804,18 @@ document.addEventListener("DOMContentLoaded", () => {
   function displayMessages(messages) {
     // Clear existing messages first
     chatMessages.innerHTML = "";
-    
+
     // Then add each message from history
     messages.forEach((message) => {
       addMessageToChat(message.role, message.content, message.data);
     });
-    
+
     // Scroll to the bottom
     chatMessages.scrollTop = chatMessages.scrollHeight;
   }
 
   function addMessageToChat(role, content, data = {}) {
-    if (role === "assistant" && data && data.actions) {      
+    if (role === "assistant" && data && data.actions) {
       // Add each action that requires approval
       data.actions.forEach(async (action) => {
         if (action.approveRequired) {
@@ -818,7 +836,7 @@ document.addEventListener("DOMContentLoaded", () => {
     console.log(
       `Adding message - Role: ${role}, Content: ${content?.substring(0, 50)}...`
     );
-    
+
     // Check if data contains actions that need approval
     addMessageToChat(role, content, data);
 
@@ -832,28 +850,28 @@ document.addEventListener("DOMContentLoaded", () => {
   async function saveActionStatus(actionId, status) {
     try {
       // Get existing action statuses
-      const result = await chrome.storage.local.get(['actionStatuses']);
+      const result = await chrome.storage.local.get(["actionStatuses"]);
       const actionStatuses = result.actionStatuses || {};
-      
+
       // Update the status for this action
       actionStatuses[actionId] = status;
-      
+
       // Save back to storage
       await chrome.storage.local.set({ actionStatuses });
-      
+
       console.log(`Saved action status: ${actionId} -> ${status}`);
     } catch (error) {
-      console.error('Error saving action status:', error);
+      console.error("Error saving action status:", error);
     }
   }
 
   // Add a function to load action statuses
   async function loadActionStatuses() {
     try {
-      const result = await chrome.storage.local.get(['actionStatuses']);
+      const result = await chrome.storage.local.get(["actionStatuses"]);
       return result.actionStatuses || {};
     } catch (error) {
-      console.error('Error loading action statuses:', error);
+      console.error("Error loading action statuses:", error);
       return {};
     }
   }

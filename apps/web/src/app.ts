@@ -147,7 +147,12 @@ app.post('/api/execute', async (req, res) => {
     
     try {
       const result = await engine.executeAction(action, context);
-      return res.json({ result });
+      console.log('[INFO] Action executed successfully:', result);
+      if (result.success) {
+        return res.json(result);
+      } else {
+        throw new Error(result.message);
+      }
     } catch (error: any) {
       console.error('[ERROR] Error executing action:', error);
       
@@ -168,6 +173,7 @@ app.post('/api/execute', async (req, res) => {
       }
       
       return res.status(statusCode).json({ 
+        success: false,
         error: errorMessage,
         actionType: 'error',
         parameters: {
