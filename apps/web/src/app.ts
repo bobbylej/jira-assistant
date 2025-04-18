@@ -137,7 +137,7 @@ app.post('/api/interpret', async (req, res) => {
 // Execute action
 app.post('/api/execute', async (req, res) => {
   try {
-    const { action } = req.body;
+    const { action, context } = req.body;
     
     if (!action) {
       return res.status(400).json({ error: 'No action provided' });
@@ -146,7 +146,7 @@ app.post('/api/execute', async (req, res) => {
     console.log('[INFO] Executing action:', action);
     
     try {
-      const result = await engine.executeAction(action);
+      const result = await engine.executeAction(action, context);
       return res.json({ result });
     } catch (error: any) {
       console.error('[ERROR] Error executing action:', error);
