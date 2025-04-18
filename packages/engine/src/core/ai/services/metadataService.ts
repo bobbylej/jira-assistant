@@ -348,11 +348,13 @@ export function configureMetadataService(jiraService: JiraService) {
         return;
       }
 
-      const isADFField =
-        field.defaultValue &&
-        typeof field.defaultValue === "object" &&
-        "type" in field.defaultValue &&
-        field.defaultValue.type === "doc";
+      // Description and fields with defaultValue as doc are ADF fields
+      const isADFField = field.key === "description" ||
+        (field.defaultValue &&
+          typeof field.defaultValue === "object" &&
+          "type" in field.defaultValue &&
+          field.defaultValue.type === "doc");
+          
       metadataParams[key] = {
         key: key as keyof JiraActionParams<T>[0],
         fieldName: field.name,

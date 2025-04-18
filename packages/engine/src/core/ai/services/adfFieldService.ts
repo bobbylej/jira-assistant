@@ -1,195 +1,385 @@
-import {
-  AICompletionTool,
-  AIProvider,
-} from "../../../adapters/ai/types";
+import { AICompletionTool, AIProvider } from "../../../adapters/ai/types";
 import { logger } from "../../../utils/logger";
 import { JiraActionParams } from "../../jira";
 import { JiraContext } from "../types";
 import { JiraParamsWithMetadata } from "../types";
 
 export function configureADFFieldService(aiClient: AIProvider) {
-  async function generateADFContent<T extends "createIssue" | "updateIssue">({
-    issueType,
-    params,
-    context,
-    chatHistory,
-  }: {
-    issueType: string;
-    params: JiraParamsWithMetadata<keyof JiraActionParams<T>[0]>;
-    context?: JiraContext;
-    chatHistory?: any[];
-  }): Promise<JiraParamsWithMetadata<keyof JiraActionParams<T>[0]>> {
-    try {
-      // Filter only ADF fields that need content generation
-      const adfFields = Object.entries(params).filter(
-        ([_, param]) => param.isADFField
-      );
-
-      if (adfFields.length === 0) {
-        return params;
-      }
-
-      let prompt = `Generate content for multiple fields of a Jira ${issueType}.
-
-Available context and values:
-${Object.entries(params)
-  .map(([_key, param]) => `- ${param.fieldName}: ${param.value || "(empty)"}`)
-  .join("\n")}
-
-The content should follow Atlassian Document Format (ADF) compatible formatting:
-1. Use Markdown-style formatting which will be converted to ADF
-2. Headers should use # syntax (e.g., # H1, ## H2)
-3. Lists can be bulleted (-) or numbered (1.)
-4. Code blocks should use triple backticks
-5. Tables should use standard markdown table syntax
-6. Text styling can include **bold**, *italic*, and ~~strikethrough~~
-7. Links should use [text](url) format
-
-Fields to generate content for:
-${adfFields
-  .map(
-    ([_key, param]) =>
-      `- ${param.fieldName}${param.template ? " (with template)" : ""}`
-  )
-  .join("\n")}
-
-`;
-
-      // Add templates if available
-      const fieldsWithTemplates = adfFields.filter(
-        ([_, param]) => param.template
-      );
-      if (fieldsWithTemplates.length > 0) {
-        prompt += `\nTemplates to follow:
-${fieldsWithTemplates
-  .map(
-    ([_key, param]) => `\n${param.fieldName} template:
-"""
-${param.template}
-"""`
-  )
-  .join("\n")}
-
-Please use these templates exactly as provided, maintaining all sections and ADF-compatible formatting.`;
-      }
-
-      // Add context information if available
-      if (context) {
-        prompt += `\n\nCurrent context: ${JSON.stringify(context)}`;
-      }
-
-      // Add chat history if available
-      if (chatHistory && chatHistory.length > 0) {
-        prompt += `\n\nRecent conversation:`;
-        const recentMessages = chatHistory.slice(-5);
-        recentMessages.forEach((msg) => {
-          prompt += `\n- ${msg.role}: ${msg.content}`;
-        });
-      }
-
-      // Add specific guidance based on issue type
-      switch (issueType.toLowerCase()) {
-        case "epic":
-          prompt += `\n\nFor an Epic, ensure these sections are included where appropriate:
-- Overview
-- Goals
-- Success Criteria
-- Dependencies
-- Stakeholders`;
-          break;
-
-        case "story":
-          prompt += `\n\nFor a User Story, ensure these sections are included where appropriate:
-- User Story Statement
-- Acceptance Criteria
-- Technical Notes
-- Dependencies`;
-          break;
-
-        case "bug":
-          prompt += `\n\nFor a Bug, ensure these sections are included where appropriate:
-- Bug Description
-- Steps to Reproduce
-- Expected vs Actual Behavior
-- Environment
-- Impact`;
-          break;
-
-        default:
-          prompt += `\n\nFor a Task, ensure these sections are included where appropriate:
-- Overview
-- Requirements
-- Acceptance Criteria
-- Notes`;
-          break;
-      }
-
-      logger.debug("[INFO] Generated prompt:", prompt);
-
-      const tools: AICompletionTool[] = [
-        {
-          type: "function",
-          function: {
-            name: "set_adf_fields",
-            description: "Set values for ADF fields",
-            parameters: {
-              type: "object",
-              properties: Object.fromEntries(
-                adfFields.map(([_, param]) => [
-                  param.fieldName,
-                  {
-                    type: "string",
-                    description: `Content for ${param.fieldName} field in ADF-compatible markdown format`,
-                  },
-                ])
-              ),
-              required: adfFields.map(([_, param]) => param.fieldName),
+  function getHintsToGenerateDescriptionBasedOnIssueType(issueType: string) {
+    switch (issueType.toLowerCase()) {
+      case "epic":
+        return JSON.stringify({
+          version: 1,
+          type: "doc",
+          content: [
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Overview:",
+                  marks: [{ type: "strong" }],
+                },
+              ],
             },
-          },
-        },
-      ];
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Provide overview here.",
+                },
+              ],
+            },
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Goals:",
+                  marks: [{ type: "strong" }],
+                },
+              ],
+            },
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Provide goals here.",
+                },
+              ],
+            },
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Success Criteria:",
+                  marks: [{ type: "strong" }],
+                },
+              ],
+            },
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Provide success criteria here.",
+                },
+              ],
+            },
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Dependencies:",
+                  marks: [{ type: "strong" }],
+                },
+              ],
+            },
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Provide dependencies here.",
+                },
+              ],
+            },
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Stakeholders:",
+                  marks: [{ type: "strong" }],
+                },
+              ],
+            },
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Provide stakeholders here.",
+                },
+              ],
+            },
+          ],
+        });
 
-      logger.debug("Tools:", JSON.stringify(tools));
+      case "story":
+        return JSON.stringify({
+          version: 1,
+          type: "doc",
+          content: [
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "User Story Statement:",
+                  marks: [{ type: "strong" }],
+                },
+              ],
+            },
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Provide user story statement here.",
+                },
+              ],
+            },
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Acceptance Criteria:",
+                  marks: [{ type: "strong" }],
+                },
+              ],
+            },
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Provide acceptance criteria here.",
+                },
+              ],
+            },
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Technical Notes:",
+                  marks: [{ type: "strong" }],
+                },
+              ],
+            },
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Provide technical notes here.",
+                },
+              ],
+            },
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Dependencies:",
+                  marks: [{ type: "strong" }],
+                },
+              ],
+            },
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Provide dependencies here.",
+                },
+              ],
+            },
+          ],
+        });
 
-      const response = await aiClient.createChatCompletion({
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a Jira expert who creates content in Atlassian Document Format (ADF) compatible markdown. You structure content with clear headings, lists, and proper formatting that can be converted to ADF. Your content is concise yet thorough, using appropriate formatting elements like tables, code blocks, and text styling where needed. You can generate multiple related fields at once, ensuring they work well together and are consistent with all available context.",
-          },
-          { role: "user", content: prompt },
-        ],
-        temperature: 0.5,
-        tools,
-      });
+      case "bug":
+        return JSON.stringify({
+          version: 1,
+          type: "doc",
+          content: [
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Bug Description:",
+                  marks: [{ type: "strong" }],
+                },
+              ],
+            },
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Provide bug description here.",
+                },
+              ],
+            },
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Steps to Reproduce:",
+                  marks: [{ type: "strong" }],
+                },
+              ],
+            },
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Provide steps to reproduce here.",
+                },
+              ],
+            },
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Expected vs Actual Behavior:",
+                  marks: [{ type: "strong" }],
+                },
+              ],
+            },
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Provide expected vs actual behavior here.",
+                },
+              ],
+            },
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Environment:",
+                  marks: [{ type: "strong" }],
+                },
+              ],
+            },
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Provide environment details here.",
+                },
+              ],
+            },
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Impact:",
+                  marks: [{ type: "strong" }],
+                },
+              ],
+            },
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Provide impact details here.",
+                },
+              ],
+            },
+          ],
+        });
 
-      // Process the response
-      const message = response.choices[0].message;
-
-      const updatedParams = { ...params };
-
-      // Handle tool calls
-      logger.info("Tool calls:", JSON.stringify(message.tool_calls));
-      message.tool_calls?.forEach((toolCall) => {
-        const functionName = toolCall.function.name;
-        const args = toolCall.function.arguments;
-
-        switch (functionName) {
-          case "set_adf_fields":
-            Object.entries(args).forEach(([key, value]) => {
-              updatedParams[key as keyof JiraActionParams<T>[0]] = {
-                ...updatedParams[key as keyof JiraActionParams<T>[0]],
-                value: value,
-              };
-            });
-        }
-      });
-
-      return updatedParams;
-    } catch (error) {
-      logger.error("Error generating ADF content:", error);
-      return params;
+      default:
+        return JSON.stringify({
+          version: 1,
+          type: "doc",
+          content: [
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Overview:",
+                  marks: [{ type: "strong" }],
+                },
+              ],
+            },
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Provide overview here.",
+                },
+              ],
+            },
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Requirements:",
+                  marks: [{ type: "strong" }],
+                },
+              ],
+            },
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Provide requirements here.",
+                },
+              ],
+            },
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Acceptance Criteria:",
+                  marks: [{ type: "strong" }],
+                },
+              ],
+            },
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Provide acceptance criteria here.",
+                },
+              ],
+            },
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Notes:",
+                  marks: [{ type: "strong" }],
+                },
+              ],
+            },
+            {
+              type: "paragraph",
+              content: [
+                {
+                  type: "text",
+                  text: "Provide notes here.",
+                },
+              ],
+            },
+          ],
+        });
     }
   }
 
@@ -253,7 +443,13 @@ ${fieldsWithTemplates
   .map(
     ([_key, param]) => `\n${param.fieldName} template:
 """
-${param.template}
+${
+  param.template
+    ? param.template
+    : param.key === "description"
+    ? getHintsToGenerateDescriptionBasedOnIssueType(issueType)
+    : ""
+}
 """`
   )
   .join("\n")}
