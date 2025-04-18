@@ -1,4 +1,4 @@
-import { ChatCompletionTool } from "openai/resources/chat";
+import { AICompletionTool } from "../ai/types";
 
 // Define system prompts
 export const SYSTEM_PROMPT = `I'm a Jira assistant, providing expert guidance to help users manage their Jira projects and issues efficiently. Please provide your request, and I'll analyze the Jira context to deliver the most relevant and accurate response.
@@ -34,7 +34,7 @@ If you need to perform multiple steps, please define multiple tool calls in the 
 My primary objective is to leverage these Jira tools to perform actions directly, rather than simply describing possibilities. I'll always use the most appropriate function for the task at hand, and I'll provide clear explanations of what I've done or what information I've found.`;
 
 // Define tools
-export const JIRA_TOOLS: ChatCompletionTool[] = [
+export const JIRA_TOOLS: AICompletionTool[] = [
   {
     type: "function",
     function: {
@@ -66,7 +66,7 @@ export const JIRA_TOOLS: ChatCompletionTool[] = [
               "JQL query string (e.g., 'project = PROJ AND status = \"In Progress\"')",
           },
           maxResults: {
-            type: "integer",
+            type: "number",
             description: "Maximum number of results to return",
           },
         },
@@ -363,6 +363,10 @@ export const JIRA_TOOLS: ChatCompletionTool[] = [
             type: "string",
             description:
               "User ID to assign the issue to (only updated if provided)",
+          },
+          parent: {
+            type: "string",
+            description: "The key of the parent issue for creating subtasks",
           },
         },
         required: ["issueKey"],

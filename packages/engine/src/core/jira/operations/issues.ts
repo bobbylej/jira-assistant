@@ -40,11 +40,16 @@ export function configureIssueOperations(client: JiraClient) {
   }): Promise<JiraResponse<JiraSearchResult>> {
     logger.info(`Searching issues with JQL: ${jql}`);
 
-    const searchResult = await jiraRequest<JiraSearchResult>(client, "/rest/api/3/search", "POST", {
-      jql,
-      maxResults,
-      fields: ["summary", "status", "issuetype", "priority", "assignee"],
-    });
+    const searchResult = await jiraRequest<JiraSearchResult>(
+      client,
+      "/rest/api/3/search",
+      "POST",
+      {
+        jql,
+        maxResults,
+        fields: ["summary", "status", "issuetype", "priority", "assignee"],
+      }
+    );
 
     return {
       success: true,
@@ -58,6 +63,7 @@ export function configureIssueOperations(client: JiraClient) {
     summary,
     description,
     issueType,
+    parent,
     ...rest
   }: CreateIssueParams): Promise<SingleIssueJiraResponse> {
     logger.info(`Creating issue in project ${projectKey}: ${summary}`);
@@ -76,6 +82,7 @@ export function configureIssueOperations(client: JiraClient) {
         issuetype: {
           name: issueType,
         },
+        ...(parent && { parent: { key: parent } }),
       },
     };
 
@@ -96,7 +103,7 @@ export function configureIssueOperations(client: JiraClient) {
       self: string;
     }>(client, "/rest/api/3/issue", "POST", issueData);
 
-    const { data: issue }= await getIssue({ issueKey: response.key });
+    const { data: issue } = await getIssue({ issueKey: response.key });
 
     // Get the full issue details
     return {
@@ -427,7 +434,10 @@ export function configureIssueOperations(client: JiraClient) {
 
       // Check if we're trying to link to an Epic
       if (targetIssue.fields.issuetype.name === "Epic") {
-        const epicLinkResult = await linkIssueToEpic(sourceIssueKey, targetIssueKey);
+        const epicLinkResult = await linkIssueToEpic(
+          sourceIssueKey,
+          targetIssueKey
+        );
         if (epicLinkResult.success) {
           return epicLinkResult;
         }
@@ -435,11 +445,19 @@ export function configureIssueOperations(client: JiraClient) {
       }
 
       // Use standard issue links as a fallback
-      return await createStandardIssueLink(sourceIssueKey, targetIssueKey, linkType);
+      return await createStandardIssueLink(
+        sourceIssueKey,
+        targetIssueKey,
+        linkType
+      );
     } catch (error) {
       logger.error(`Failed to link issues: ${error}`);
       // Try one more approach - add a comment mentioning the relationship
-      return await createReferenceComment(sourceIssueKey, targetIssueKey, error);
+      return await createReferenceComment(
+        sourceIssueKey,
+        targetIssueKey,
+        error
+      );
     }
   }
 
@@ -447,7 +465,7 @@ export function configureIssueOperations(client: JiraClient) {
    * Attempts to link an issue to an Epic using the Epic Link field
    */
   async function linkIssueToEpic(
-    sourceIssueKey: string, 
+    sourceIssueKey: string,
     epicKey: string
   ): Promise<LinkIssueJiraResponse> {
     logger.info(`Target issue ${epicKey} is an Epic`);
@@ -484,7 +502,9 @@ export function configureIssueOperations(client: JiraClient) {
             }
           );
 
-          const { data: sourceIssue } = await getIssue({ issueKey: sourceIssueKey });
+          const { data: sourceIssue } = await getIssue({
+            issueKey: sourceIssueKey,
+          });
           const { data: targetIssue } = await getIssue({ issueKey: epicKey });
 
           return {
@@ -502,7 +522,10 @@ export function configureIssueOperations(client: JiraClient) {
 
       // If we couldn't use the Epic Link field, try using the standard issue link
       logger.info(`Falling back to standard issue link for Epic relationship`);
-      return { success: false, message: "Epic link field not found or failed to update" };
+      return {
+        success: false,
+        message: "Epic link field not found or failed to update",
+      };
     } catch (error) {
       logger.error(`Error in linkIssueToEpic: ${error}`);
       return { success: false, message: `Failed to link to Epic: ${error}` };
@@ -591,8 +614,12 @@ export function configureIssueOperations(client: JiraClient) {
         }
       );
 
-      const { data: sourceIssue } = await getIssue({ issueKey: sourceIssueKey });
-      const { data: targetIssue } = await getIssue({ issueKey: targetIssueKey });
+      const { data: sourceIssue } = await getIssue({
+        issueKey: sourceIssueKey,
+      });
+      const { data: targetIssue } = await getIssue({
+        issueKey: targetIssueKey,
+      });
 
       return {
         success: true,
@@ -631,9 +658,7 @@ export function configureIssueOperations(client: JiraClient) {
     // Only get the current issue if we need to format the description
     if (description) {
       // Format the description with the appropriate issue type
-      fields.description = formatDescription(
-        description
-      );
+      fields.description = formatDescription(description);
     }
 
     // Add other fields that are provided

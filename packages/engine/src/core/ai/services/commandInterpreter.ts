@@ -1,4 +1,3 @@
-import { OpenAI } from "openai";
 import { JIRA_TOOLS, SYSTEM_PROMPT } from "../../../adapters/openai/prompts";
 import { logger } from "../../../utils/logger";
 import { ChatMessage, JiraContext } from "../types";
@@ -54,6 +53,7 @@ export function configureCommandInterpreter(
             metadataService.generateMetadataSummary(projectMetadata);
         }
       }
+      logger.info("jiraTools", JSON.stringify(jiraTools));
 
       logger.info(
         "Message to send to OpenAI:",

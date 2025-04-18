@@ -8,7 +8,7 @@ import {
 import { configureCommandInterpreter } from "./services/commandInterpreter";
 import { configureActionExecutor } from "./services/actionExecutor";
 import { configureMetadataService } from "./services/metadataService";
-import { configureDescriptionService } from "./services/descriptionService";
+import { configureADFFieldService } from "./services/adfFieldService";
 import { AIProvider } from "../../adapters/ai/types";
 
 export function configureCommandService(
@@ -17,8 +17,8 @@ export function configureCommandService(
 ) {
   // Configure the individual services
   const metadataService = configureMetadataService(jiraService);
-  const descriptionService = configureDescriptionService(aiClient);
-  const actionExecutor = configureActionExecutor(jiraService, descriptionService);
+  const adfService = configureADFFieldService(aiClient);
+  const actionExecutor = configureActionExecutor(jiraService, adfService, metadataService);
   const commandInterpreter = configureCommandInterpreter(
     aiClient,
     metadataService,
@@ -34,7 +34,7 @@ export function configureCommandService(
 
   async function executeAction(
     action: JiraActionParamsType,
-    context?: JiraContext
+    context: JiraContext
   ) {
     return actionExecutor.executeAction(action, context);
   }

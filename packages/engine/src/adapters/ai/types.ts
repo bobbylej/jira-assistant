@@ -1,7 +1,4 @@
-import {
-  ChatCompletionCreateParams,
-  ChatCompletionTool,
-} from "openai/resources/chat/completions";
+import { ToolFunctionProperty } from "../../core/ai";
 
 export interface AIModelConfig {
   apiKey: string;
@@ -43,13 +40,52 @@ type ChatMessageSystem = {
 
 export type ChatMessage = ChatMessageUser | ChatMessageAssistant | ChatMessageSystem;
 
+export interface StructuredOutputConfig {
+  type: 'json' | 'enum';
+  schema?: {
+    type: 'object' | 'array';
+    properties?: Record<string, {
+      type: string;
+      description?: string;
+      enum?: string[];
+      format?: string;
+      items?: {
+        type: string;
+        description?: string;
+      };
+    }>;
+    required?: string[];
+    items?: {
+      type: string;
+      description?: string;
+    };
+  };
+  enum?: string[];
+}
+
+export interface AICompletionTool {
+  type: 'function';
+  function: {
+    name: string;
+    description?: string;
+    parameters: {
+      type: 'object';
+      properties: Record<string, ToolFunctionProperty>;
+      required?: string[];
+    };
+  };
+}
+
 export interface AICompletionParams {
   model?: string;
-  messages: ChatMessage[];
+  messages: Array<{
+    role: 'system' | 'user' | 'assistant';
+    content: string;
+  }>;
   temperature?: number;
-  tools?: ChatCompletionTool[];
-  tool_choice?: any;
-  [key: string]: any; // For provider-specific parameters
+  tools?: AICompletionTool[];
+  tool_choice?: 'auto' | 'none' | { type: 'function'; function: { name: string } };
+  structuredOutput?: StructuredOutputConfig;
 }
 
 export interface AICompletionResponse {

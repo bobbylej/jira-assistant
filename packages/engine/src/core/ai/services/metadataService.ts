@@ -1,20 +1,22 @@
-import { ChatCompletionTool } from "openai/resources";
 import { logger } from "../../../utils/logger";
-import { JiraService } from "../../jira";
+import { JiraActionParams, JiraService } from "../../jira";
+import { IssueTypeMetadata, ProjectMetadata } from "../../jira";
 import {
-  IssueTypeMetadata,
-  ProjectMetadata,
-} from "../../jira";
-import { ToolFunctionProperty } from "../types";
-import { generateDocFieldDescription } from "../utils/prompts.utils";
+  JiraParamWithMetadata,
+  JiraContext,
+  JiraParamsWithMetadata,
+  ToolFunctionProperty,
+} from "../types";
+import {
+  generateToolDescription,
+  generateToolEnumDescription,
+  generateToolEnumValues,
+  generateToolType,
+  generateToolTypeDescription,
+} from "../utils/metadata.utils";
+import { AICompletionTool } from "../../../adapters/ai/types";
 
-export interface MetadataService {
-  fetchJiraMetadata: (projectIdOrKey?: string) => Promise<ProjectMetadata | null>;
-  updateToolsWithMetadata: (tools: ChatCompletionTool[], metadata: ProjectMetadata) => ChatCompletionTool[];
-  generateMetadataSummary: (metadata: ProjectMetadata) => string;
-}
-
-export function configureMetadataService(jiraService: JiraService): MetadataService {
+export function configureMetadataService(jiraService: JiraService) {
   // Function to fetch metadata for available fields
   async function fetchJiraMetadata(
     projectIdOrKey?: string
@@ -89,13 +91,18 @@ export function configureMetadataService(jiraService: JiraService): MetadataServ
 
   // Function to update the tools with metadata
   function updateToolsWithMetadata(
-    tools: ChatCompletionTool[],
+    tools: AICompletionTool[],
     metadata: ProjectMetadata
-  ): ChatCompletionTool[] {
+  ): AICompletionTool[] {
+    // If we have no issue types metadata, return the original tools
+    if (!metadata.issueTypes || metadata.issueTypes.length === 0) {
+      return tools;
+    }
+
     // Create a deep copy of the tools array to avoid modifying the original
     const updatedTools = JSON.parse(
       JSON.stringify(tools)
-    ) as ChatCompletionTool[];
+    ) as AICompletionTool[];
 
     // Find and remove the generic create_issue and update_issue tools
     const createIssueIndex = updatedTools.findIndex(
@@ -128,52 +135,40 @@ export function configureMetadataService(jiraService: JiraService): MetadataServ
       );
     }
 
-    // If we have issue types metadata, create specific tools for each type
-    if (metadata.issueTypes && metadata.issueTypes.length > 0) {
-      metadata.issueTypes.forEach((issueType) => {
-        // Create a tool for creating this specific issue type
-        if (originalCreateIssueTool) {
-          const createTool = createIssueTypeSpecificTool(
-            originalCreateIssueTool,
-            issueType,
-            "create",
-            metadata.projectKey
-          );
-          updatedTools.push(createTool);
-        }
-
-        // Create a tool for updating to this specific issue type
-        if (originalUpdateIssueTool) {
-          const updateTool = createIssueTypeSpecificTool(
-            originalUpdateIssueTool,
-            issueType,
-            "update",
-            metadata.projectKey
-          );
-          updatedTools.push(updateTool);
-        }
-      });
-    } else {
-      // If no metadata, add back the original tools
+    metadata.issueTypes.forEach((issueType) => {
+      // Create a tool for creating this specific issue type
       if (originalCreateIssueTool) {
-        updatedTools.push(originalCreateIssueTool);
+        const createTool = createIssueTypeSpecificTool(
+          originalCreateIssueTool,
+          issueType,
+          "create",
+          metadata.projectKey
+        );
+        updatedTools.push(createTool);
       }
 
+      // Create a tool for updating to this specific issue type
       if (originalUpdateIssueTool) {
-        updatedTools.push(originalUpdateIssueTool);
+        const updateTool = createIssueTypeSpecificTool(
+          originalUpdateIssueTool,
+          issueType,
+          "update",
+          metadata.projectKey
+        );
+        updatedTools.push(updateTool);
       }
-    }
+    });
 
     return updatedTools;
   }
 
   // Function to create an issue type specific tool
   function createIssueTypeSpecificTool(
-    originalTool: ChatCompletionTool,
+    originalTool: AICompletionTool,
     issueType: IssueTypeMetadata,
     action: "create" | "update",
     projectKey: string
-  ): ChatCompletionTool {
+  ): AICompletionTool {
     // Create a deep copy of the original tool
     const newTool = JSON.parse(JSON.stringify(originalTool));
 
@@ -231,159 +226,50 @@ export function configureMetadataService(jiraService: JiraService): MetadataServ
         }
 
         // Determine the appropriate field type based on Jira's schema
-        let fieldType = "string"; // Default type
-        let itemsType = "string"; // Default items type for arrays
-        let itemsTypeDescription = "";
+        const fieldType = generateToolType(field.schema?.type);
 
-        if (field.schema) {
-          // Map Jira schema types to JSON Schema types
-          switch (field.schema.type) {
-            case "number":
-            case "integer":
-              fieldType = field.schema.type;
-              break;
-            case "array":
-              fieldType = "array";
-              // Handle different array item types
-              if (field.schema.items) {
-                // Keep track of the original Jira type for description
-                itemsType = field.schema.items;
+        const isFieldArray = fieldType === "array";
 
-                // Special handling for issuelinks in arrays
-                if (field.schema.items === "issuelinks") {
-                  itemsType = "string";
-                  itemsTypeDescription = "Use issue key (e.g., PROJ-123)";
-                }
-              }
-              break;
-            case "boolean":
-              fieldType = "boolean";
-              break;
-            case "issuelinks":
-              fieldType = "string";
-              break;
-            case "user":
-            case "group":
-            case "version":
-            case "component":
-            case "option":
-            case "priority":
-            case "resolution":
-              // These are all string-based IDs in the API
-              fieldType = "string";
-              break;
-            case "datetime":
-            case "date":
-              // Dates are passed as strings in ISO format
-              fieldType = "string";
-              break;
-            default:
-              // Default to string for any other types
-              fieldType = "string";
-          }
-        }
+        // Handle different array item types
+        const hasItems = isFieldArray && field.schema?.items;
+        const itemsType = hasItems
+          ? generateToolType(field.schema?.items)
+          : null;
+
+        const itemsTypeDescription = hasItems
+          ? generateToolTypeDescription(field.schema?.items)
+          : null;
+
+        const enumValues = generateToolEnumValues(field.allowedValues);
+
+        const itemsEnumValuesDescription = isFieldArray
+          ? generateToolEnumDescription(field.allowedValues)
+          : null;
 
         // Create the field property
         const fieldProperty: ToolFunctionProperty = {
-          type: fieldType as any,
-          description: `${field.name}${field.required ? " (Required)" : ""}${
-            field.schema
-              ? ` [${field.schema.type}${
-                  field.schema.type === "array" ? ` of ${itemsType}` : ""
-                }]`
-              : ""
-          }`,
+          type: fieldType,
+          description: generateToolDescription(field, fieldType, itemsType),
           default: field.defaultValue,
+          ...(!isFieldArray && enumValues?.length ? { enum: enumValues } : {}),
+          ...(itemsType
+            ? {
+                items: {
+                  type: itemsType,
+                  description: `Items of type ${itemsType}${
+                    itemsTypeDescription ? ` - ${itemsTypeDescription}` : ""
+                  }${
+                    itemsEnumValuesDescription
+                      ? ` - ${itemsEnumValuesDescription}`
+                      : ""
+                  }`,
+                  ...(isFieldArray && enumValues?.length
+                    ? { enum: enumValues }
+                    : {}),
+                },
+              }
+            : {}),
         };
-
-        // Add more specific information based on field type
-        if (field.schema) {
-          switch (field.schema.type) {
-            case "user":
-              fieldProperty.description += ` - Use account ID from get_project_users`;
-              break;
-            case "array":
-              fieldProperty.items = {
-                type: "string",
-                description: `Items of type ${itemsType}${
-                  itemsTypeDescription ? ` - ${itemsTypeDescription}` : ""
-                }`,
-              };
-              break;
-            case "datetime":
-              fieldProperty.description += ` - Use ISO format (YYYY-MM-DDTHH:MM:SS.sssZ)`;
-              break;
-            case "date":
-              fieldProperty.description += ` - Use ISO format (YYYY-MM-DD)`;
-              break;
-            case "issuelinks":
-              fieldProperty.description += ` - Use issue key (e.g., PROJ-123)`;
-              break;
-            case "doc":
-              fieldProperty.description += generateDocFieldDescription(field, action);
-              break;
-          }
-        }
-
-        const isDocField =
-          field.defaultValue &&
-          typeof field.defaultValue === "object" &&
-          "type" in field.defaultValue &&
-          field.defaultValue.type === "doc";
-        if (isDocField) {
-          fieldProperty.description += generateDocFieldDescription(field, action);
-        }
-
-        // If there's an autocomplete URL, mention it in the description
-        if (field.autoCompleteUrl) {
-          fieldProperty.description += ` - Values can be looked up via API at ${field.autoCompleteUrl}`;
-        }
-
-        // If there are allowed values, add them as enum
-        if (field.allowedValues && field.allowedValues.length > 0) {
-          const enumValues = field.allowedValues.map((v) => {
-            // Handle different formats of allowed values
-            if (Array.isArray(v)) {
-              return v.join(", ");
-            }
-            if (typeof v === "object") {
-              const value = v as any;
-              return value.name || value.value || value.key || value.id;
-            }
-            return String(v);
-          });
-
-          // Get details about the allowed values if they are objects
-          const allowedValuesDetails = field.allowedValues.map((v) => {
-            if (typeof v === "object") {
-              const value = v as any;
-              return {
-                ...(value.name ? { name: value.name} : {}),
-                ...(value.value ? { value: value.value} : {}),
-                ...(value.key ? { key: value.key} : {}),
-                ...(value.id ? { id: value.id} : {}),
-                ...(value.description ? { description: value.description} : {}),
-              };
-            }
-          }).filter((v) => !!v);
-
-          const allowedValuesDescription = allowedValuesDetails.length > 0 ? ` - Details about allowed values: ${allowedValuesDetails.map((v) => {
-            if (typeof v === "object") {
-              return `\n\`\`\`\n${JSON.stringify(v)}\n\`\`\`\n`;
-            }
-            return v;
-          }).join("")}` : "";
-
-          if (fieldType === "array") {
-            if (fieldProperty.items) {
-              fieldProperty.items.enum = enumValues;
-              fieldProperty.items.description += allowedValuesDescription;
-            }
-          } else {
-            fieldProperty.enum = enumValues;
-            fieldProperty.description += allowedValuesDescription;
-          }
-        }
 
         // Add the field to the properties
         newTool.function.parameters.properties[field.key] = fieldProperty;
@@ -420,9 +306,73 @@ export function configureMetadataService(jiraService: JiraService): MetadataServ
     return summary;
   }
 
+  async function getMetadataParams<T extends "createIssue" | "updateIssue">(
+    actionParams: JiraActionParams<T>[0],
+    context?: JiraContext
+  ): Promise<Partial<
+    JiraParamsWithMetadata<keyof JiraActionParams<T>[0]>
+  > | null> {
+    if (!context?.projectKey || !("issueType" in actionParams)) {
+      logger.info("No context or issue type found");
+      return null;
+    }
+
+    const projectMetadata = await fetchJiraMetadata(context.projectKey);
+    if (!projectMetadata) {
+      logger.info("No project metadata found");
+      return null;
+    }
+
+    const issueType = projectMetadata.issueTypes.find(
+      (type) => type.name === actionParams.issueType
+    );
+
+    if (!issueType) {
+      logger.info("No issue type found", actionParams.issueType, JSON.stringify(projectMetadata));
+      return null;
+    }
+
+    const metadataParams: Record<
+      string,
+      JiraParamWithMetadata<keyof JiraActionParams<T>[0]>
+    > = {};
+    Object.entries(actionParams).map(([key, value]) => {
+      const field = issueType.fields.find((field) => field.key === key);
+      // TODO: Set fieldName and for each param and return all params
+      if (!field) {
+        metadataParams[key] = {
+          key: key as keyof JiraActionParams<T>[0],
+          fieldName: key,
+          value,
+        };
+        return;
+      }
+
+      const isADFField =
+        field.defaultValue &&
+        typeof field.defaultValue === "object" &&
+        "type" in field.defaultValue &&
+        field.defaultValue.type === "doc";
+      metadataParams[key] = {
+        key: key as keyof JiraActionParams<T>[0],
+        fieldName: field.name,
+        value,
+        isADFField: !!isADFField,
+        template: isADFField ? JSON.stringify(field.defaultValue) : undefined,
+      };
+    });
+
+    return metadataParams as Partial<
+      JiraParamsWithMetadata<keyof JiraActionParams<T>[0]>
+    >;
+  }
+
   return {
     fetchJiraMetadata,
     updateToolsWithMetadata,
     generateMetadataSummary,
+    getMetadataParams,
   };
-} 
+}
+
+export type MetadataService = ReturnType<typeof configureMetadataService>;

@@ -13,6 +13,7 @@ import {
   AICompletionParams,
   AICompletionResponse,
   AITranscriptionResponse,
+  StructuredOutputConfig,
 } from "./types";
 import { ToolFunctionProperty } from "../../core/ai";
 
@@ -94,6 +95,64 @@ export function configureGeminiAdapter(config: AIModelConfig): AIProvider {
     );
   }
 
+  function convertStructuredOutputToGeminiConfig(
+    config: StructuredOutputConfig
+  ): { responseMimeType: string; responseSchema: Schema } | undefined {
+    if (!config) return undefined;
+
+    if (config.type === 'enum' && config.enum) {
+      return {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.STRING,
+          enum: config.enum,
+        },
+      };
+    }
+
+    if (config.type === 'json' && config.schema) {
+      const schema: Schema = {
+        type: config.schema.type === 'object' ? Type.OBJECT : Type.ARRAY,
+      };
+
+      if (config.schema.properties) {
+        schema.properties = Object.fromEntries(
+          Object.entries(config.schema.properties).map(([key, prop]) => [
+            key,
+            {
+              type: convertToolPropertyTypeToGeminiType(prop.type as any),
+              description: prop.description,
+              enum: prop.enum,
+              format: prop.format,
+              items: prop.items ? {
+                type: convertToolPropertyTypeToGeminiType(prop.items.type as any),
+                description: prop.items.description,
+              } : undefined,
+            },
+          ])
+        );
+      }
+
+      if (config.schema.required) {
+        schema.required = config.schema.required;
+      }
+
+      if (config.schema.items) {
+        schema.items = {
+          type: convertToolPropertyTypeToGeminiType(config.schema.items.type as any),
+          description: config.schema.items.description,
+        };
+      }
+
+      return {
+        responseMimeType: 'application/json',
+        responseSchema: schema,
+      };
+    }
+
+    return undefined;
+  }
+
   async function createChatCompletion(
     params: AICompletionParams
   ): Promise<AICompletionResponse> {
@@ -101,7 +160,7 @@ export function configureGeminiAdapter(config: AIModelConfig): AIProvider {
       // Convert OpenAI format messages to Gemini format
       const contents = convertMessagesToGeminiFormat(params.messages);
       const tools = convertToolsToGeminiFormat(params.tools);
-      console.log("tools", JSON.stringify(tools));
+      const structuredOutput = params.structuredOutput ? convertStructuredOutputToGeminiConfig(params.structuredOutput) : undefined;
 
       // Handle system message specially since Gemini doesn't have a system role
       const systemMessage = params.messages.find(
@@ -120,6 +179,7 @@ export function configureGeminiAdapter(config: AIModelConfig): AIProvider {
             },
           ],
           temperature: params.temperature || 0.7,
+          ...structuredOutput,
         },
       });
 

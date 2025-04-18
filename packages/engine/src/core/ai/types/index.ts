@@ -20,19 +20,6 @@ export interface ChatMessage {
   content: string;
 }
 
-export interface CreateEpicAndLinkParams {
-  projectKey: string;
-  epicSummary: string;
-  epicDescription?: string;
-  issueKey: string;
-}
-
-export interface CreateAndLinkSubtasksParams {
-  projectKey: string;
-  parent: string;
-  subtasks: { summary: string; description?: string; assignee?: string }[];
-}
-
 export interface MoveToEpicParams {
   projectKey: string;
   targetEpicKey: string;
@@ -87,19 +74,22 @@ type JiraSingleStepActionParamsType =
       parameters: JiraActionParams<"updateIssuePriority">[0];
     }
   | { actionType: "linkIssues"; parameters: JiraActionParams<"linkIssues">[0] }
-  | { actionType: "createEpicAndLink"; parameters: CreateEpicAndLinkParams }
-  | {
-      actionType: "createAndLinkSubtasks";
-      parameters: CreateAndLinkSubtasksParams;
-    }
   | { actionType: "moveToEpic"; parameters: MoveToEpicParams }
   | { actionType: "message"; parameters: { message: string } };
 
 export type JiraActionParamsType = JiraSingleStepActionParamsType;
 
+export type ToolFunctionPropertyType =
+  | "string"
+  | "number"
+  | "boolean"
+  | "array"
+  | "object"
+  | "doc";
+
 export interface ToolFunctionProperty {
   description: string;
-  type: 'string' | 'number' | 'boolean' | 'array' | 'object' | 'doc';
+  type: ToolFunctionPropertyType;
   additionalProperties?: boolean;
   enum?: string[];
   items?: ToolFunctionProperty;
@@ -107,3 +97,16 @@ export interface ToolFunctionProperty {
   properties?: Record<string, ToolFunctionProperty>;
   default?: any;
 }
+
+export type JiraParamWithMetadata<T extends string | number | symbol = string> = {
+  key: T;
+  fieldName: string;
+  value: string;
+  isADFField?: boolean;
+  template?: string;
+};
+
+export type JiraParamsWithMetadata<T extends string | number | symbol = string> = Record<
+  T,
+  JiraParamWithMetadata<T>
+>;
