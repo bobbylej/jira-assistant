@@ -18,7 +18,11 @@ document.addEventListener("DOMContentLoaded", () => {
   // Event listeners
   sendButton.addEventListener("click", handleSendMessage);
   textInput.addEventListener("keypress", (e) => {
-    if (e.key === "Enter") handleSendMessage();
+    console.log("keypress", e.key, e.shiftKey);
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
   });
   recordButton.addEventListener("mousedown", startRecording);
   recordButton.addEventListener("mouseup", stopRecording);
@@ -559,6 +563,7 @@ document.addEventListener("DOMContentLoaded", () => {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 action,
+                context: jiraContext || null,
               }),
             },
             30000
