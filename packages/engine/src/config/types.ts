@@ -1,6 +1,4 @@
-export interface OpenAIConfig {
-  apiKey: string;
-}
+import { AIProviderType } from "../adapters/ai/types";
 
 export interface JiraConfig {
   baseUrl: string;
@@ -9,24 +7,11 @@ export interface JiraConfig {
 }
 
 export interface EngineConfig {
-  openaiApiKey: string;
+  aiApiKey: string;
+  aiProvider: AIProviderType;
   jiraBaseUrl: string;
   jiraEmail: string;
   jiraApiToken: string;
   logsDir: string;
   dataDir: string;
 }
-
-export interface AIConfig {
-  provider: 'openai' | 'gemini' | 'anthropic' | 'ollama';
-  apiKey: string;
-  // Other common AI configuration options
-}
-
-export interface OpenAIConfig extends AIConfig {
-  // OpenAI specific configuration
-}
-
-export interface GeminiConfig extends AIConfig {
-  // Gemini specific configuration
-} 

@@ -7,17 +7,7 @@ import { configureChatManager } from "./core/chat/chatManager";
 import { configureLogger, Logger } from "./utils/logger";
 import { createJiraClient, jiraRequest } from "./core/jira/client";
 import { JiraClient } from "./core/jira/types";
-import { AIProviderType } from "./adapters/ai/types";
-
-export interface EngineConfig {
-  aiApiKey: string;
-  aiProvider: AIProviderType;
-  jiraBaseUrl: string;
-  jiraEmail: string;
-  jiraApiToken: string;
-  logsDir: string;
-  dataDir: string;
-}
+import { EngineConfig } from "./config/types";
 
 async function validateJiraCredentials(
   jiraClient: JiraClient,
@@ -53,7 +43,7 @@ export function configureEngine(config: EngineConfig) {
   const logger = configureLogger(config.logsDir);
 
   // Initialize OpenAI client
-  const openai = createAIClient(config.aiProvider, {
+  const aiClient = createAIClient(config.aiProvider, {
     apiKey: config.aiApiKey,
   });
 
@@ -65,9 +55,9 @@ export function configureEngine(config: EngineConfig) {
   });
 
   // Initialize AI services
-  const intentService = configureIntentService(openai);
-  const commandService = configureCommandService(openai, jiraService);
-  const transcriptionService = configureTranscriptionService(openai, {
+  const intentService = configureIntentService(aiClient);
+  const commandService = configureCommandService(aiClient, jiraService);
+  const transcriptionService = configureTranscriptionService(aiClient, {
     tempDir: config.dataDir,
   });
 
@@ -132,24 +122,3 @@ export function configureEngine(config: EngineConfig) {
     logToFile: logger.logToFile,
   };
 }
-
-// Remove these direct exports since they're no longer available
-// export {
-//   transcribeAudio,
-//   interpretCommand,
-//   determineIntent,
-//   executeAction,
-//   getIssue,
-//   searchIssues,
-//   getProjectInfo,
-//   createIssue,
-//   updateIssueType,
-//   createNewChat,
-//   getActiveChat,
-//   addMessage,
-//   getMessages,
-//   getChats,
-//   clearChat,
-//   setActiveChat,
-//   logToFile,
-// };
