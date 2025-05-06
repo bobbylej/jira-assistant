@@ -1,4 +1,4 @@
-import { createOpenAIClient } from "./adapters/openai/client";
+import { createAIClient } from "./adapters/ai/client";
 import { configureJiraService } from "./core/jira";
 import { configureIntentService, configureCommandService } from "./core/ai";
 import { configureTranscriptionService } from "./core/ai/transcriptionService";
@@ -53,9 +53,8 @@ export function configureEngine(config: EngineConfig) {
   const logger = configureLogger(config.logsDir);
 
   // Initialize OpenAI client
-  const openai = createOpenAIClient({
+  const openai = createAIClient(config.aiProvider, {
     apiKey: config.aiApiKey,
-    provider: config.aiProvider,
   });
 
   // Initialize Jira service
