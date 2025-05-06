@@ -48,6 +48,9 @@ export function configureJiraService(config: JiraConfig) {
     // Metadata operations
     getCreateMetadataIssueTypes: metadataOperations.getCreateMetadataIssueTypes,
     getCreateFieldMetadata: metadataOperations.getCreateFieldMetadata,
+
+    // Training operations
+    searchTrainingIssuesWithADF: issueOperations.searchTrainingIssuesWithADF,
   };
 }
 

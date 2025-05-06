@@ -59,6 +59,35 @@ export function configureIssueOperations(client: JiraClient) {
     };
   }
 
+  async function searchTrainingIssuesWithADF({
+    projectKey,
+    issueType,
+    fields,
+  }: {
+    projectKey: string;
+    issueType: string;
+    fields: string[];
+  }): Promise<JiraResponse<JiraSearchResult>> {
+    logger.info(`Searching training issues with ADF for issue type ${issueType} in project ${projectKey}`);
+
+    const searchResult = await jiraRequest<JiraSearchResult>(
+      client,
+      `/rest/api/3/search`,
+      "POST",
+      {
+        jql: `project = ${projectKey} AND issuetype = ${issueType} AND (${fields.map((field) => `${field} is NOT EMPTY`).join(" OR ")}`,
+        maxResults: 10,
+        fields,
+      }
+    );
+
+    return {
+      success: true,
+      message: `Found ${searchResult.issues.length} issues`,
+      data: searchResult,
+    };
+  }
+
   async function createIssue({
     projectKey,
     summary,
