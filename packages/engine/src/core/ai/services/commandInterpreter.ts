@@ -1,4 +1,4 @@
-import { JIRA_TOOLS, SYSTEM_PROMPT } from "../../../adapters/openai/prompts";
+import { JIRA_TOOLS, SYSTEM_PROMPT } from "../constants/prompts/interpretCommand.prompts";
 import { logger } from "../../../utils/logger";
 import { ChatMessage, JiraContext } from "../types";
 import {

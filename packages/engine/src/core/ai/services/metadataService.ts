@@ -200,6 +200,9 @@ export function configureMetadataService(jiraService: JiraService) {
       enum: [issueType.name],
       default: issueType.name,
     };
+    if (!newTool.function.parameters.required.includes("issueType")) {
+      newTool.function.parameters.required.push("issueType");
+    }
 
     // Remove parent if this is not a subtask
     if (!issueType.subtask) {

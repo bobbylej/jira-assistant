@@ -1,5 +1,5 @@
 import { AIProvider } from '../../adapters/ai/types';
-import { SYSTEM_PROMPT } from '../../adapters/openai/prompts';
+import { SYSTEM_PROMPT } from './constants/prompts/interpretCommand.prompts';
 import { logger } from '../../utils/logger';
 
 export function configureIntentService(aiClient: AIProvider) {

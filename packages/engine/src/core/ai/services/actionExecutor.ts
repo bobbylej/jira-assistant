@@ -1,5 +1,6 @@
 import { logger } from "../../../utils/logger";
 import { JiraActionParams, JiraService } from "../../jira";
+import { CreateIssueParams } from "../../jira/types/issues.type";
 import {
   JiraActionParamsType,
   JiraContext,
@@ -70,7 +71,6 @@ export function configureActionExecutor(
             logger.error("Failed to enhance params:", enhaceParamsError);
             // Continue with original description if enhancement fails
           }
-          
           return jiraService.createIssue(action.parameters);
 
         case "updateIssueType":

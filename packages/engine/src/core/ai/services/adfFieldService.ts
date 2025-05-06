@@ -1,10 +1,13 @@
-import { AICompletionTool, AIProvider } from "../../../adapters/ai/types";
+import { AICompletionTool, AIProvider, StructuredOutputConfig } from "../../../adapters/ai/types";
 import { logger } from "../../../utils/logger";
 import { JiraActionParams } from "../../jira";
+import { SYSTEM_PROMPT } from "../constants/prompts/enhanceAdfField.prompts";
 import { JiraContext } from "../types";
 import { JiraParamsWithMetadata } from "../types";
 
-export function configureADFFieldService(aiClient: AIProvider) {
+export function configureADFFieldService(
+  aiClient: AIProvider,
+) {
   function getHintsToGenerateDescriptionBasedOnIssueType(issueType: string) {
     switch (issueType.toLowerCase()) {
       case "epic":
@@ -412,25 +415,77 @@ ${Object.entries(params)
   .map(([_key, param]) => `- ${param.fieldName}: ${param.value || "(empty)"}`)
   .join("\n")}
 
-The enhanced content must use Atlassian Document Format (ADF) compatible formatting:
-1. Use Markdown-style formatting which will be converted to ADF
-2. Headers should use # syntax (e.g., # H1, ## H2)
-3. Lists can be bulleted (-) or numbered (1.)
-4. Code blocks should use triple backticks
-5. Tables should use standard markdown table syntax
-6. Text styling can include **bold**, *italic*, and ~~strikethrough~~
-7. Links should use [text](url) format
+The enhanced content must use Atlassian Document Format (ADF) structure:
+1. Document Structure:
+   - Root node must be "doc" with version: 1
+   - Content must be an array of block nodes
+   - Each block node must have a "type" and "content" properties
 
-Fields to enhance:
+2. Block Nodes:
+   - Paragraphs: { type: "paragraph", content: [...] }
+   - Headings: { type: "heading", attrs: { level: 1-6 }, content: [...] }
+   - Bullet Lists: { type: "bulletList", content: [...] }
+   - Ordered Lists: { type: "orderedList", content: [...] }
+   - Code Blocks: { type: "codeBlock", attrs: { language: "..." }, content: [...] }
+   - Tables: { type: "table", content: [...] }
+   - Panels: { type: "panel", attrs: { panelType: "info|note|warning|error" }, content: [...] }
+
+3. Inline Nodes:
+   - Text: { type: "text", text: "..." }
+   - Links: { type: "text", text: "...", marks: [{ type: "link", attrs: { href: "..." } }] }
+   - Mentions: { type: "mention", attrs: { id: "...", text: "..." } }
+   - Emojis: { type: "emoji", attrs: { shortName: "..." } }
+
+4. Text Marks (styling):
+   - Bold: { type: "strong" }
+   - Italic: { type: "em" }
+   - Strikethrough: { type: "strike" }
+   - Code: { type: "code" }
+   - Underline: { type: "underline" }
+   - Text Color: { type: "textColor", attrs: { color: "..." } }
+   - Background Color: { type: "backgroundColor", attrs: { color: "..." } }
+
+5. List Items:
+   - Must be wrapped in listItem node: { type: "listItem", content: [...] }
+
+6. Table Structure:
+   - Table: { type: "table", content: [...] }
+   - Table Row: { type: "tableRow", content: [...] }
+   - Table Cell: { type: "tableCell", content: [...] }
+   - Table Header: { type: "tableHeader", content: [...] }
+
+Example structure:
+{
+  "version": 1,
+  "type": "doc",
+  "content": [
+    {
+      "type": "heading",
+      "attrs": { "level": 1 },
+      "content": [{ "type": "text", "text": "Main Title" }]
+    },
+    {
+      "type": "paragraph",
+      "content": [
+        { "type": "text", "text": "This is " },
+        { "type": "text", "text": "bold", "marks": [{ "type": "strong" }] },
+        { "type": "text", "text": " text" }
+      ]
+    }
+  ]
+}
+
+Below is the list of fields to enhance. Provide value for each field in ADF-compatible format.
+<fields_to_enhance>
 ${adfFields
   .map(
-    ([_key, param]) => `\n${param.fieldName}:
+    ([_key, param], index) => `\n${index + 1}. ${param.fieldName}:
 """
 ${param.value}
 """`
   )
   .join("\n")}
-
+</fields_to_enhance>
 `;
 
       // Add templates if available
@@ -438,10 +493,11 @@ ${param.value}
         ([_, param]) => param.template
       );
       if (fieldsWithTemplates.length > 0) {
-        prompt += `\nTemplates to follow:
+        prompt += `\nBelow are templates to follow for each field. Use them to structure the content.
+<templates_to_follow>
 ${fieldsWithTemplates
   .map(
-    ([_key, param]) => `\n${param.fieldName} template:
+    ([_key, param], index) => `\n${index + 1}. ${param.fieldName} template:
 """
 ${
   param.template
@@ -453,8 +509,13 @@ ${
 """`
   )
   .join("\n")}
+</templates_to_follow>
 
-Please restructure the content to match these templates exactly, maintaining all sections and ADF-compatible formatting.`;
+Please restructure the content to match these templates exactly, maintaining all sections and ADF-compatible formatting. Ensure the content is:
+1. Clear and concise
+2. Technically accurate
+3. Well-structured with proper headings and sections
+4. Includes all necessary technical details`;
       }
 
       // Add context information if available
@@ -471,6 +532,8 @@ Please restructure the content to match these templates exactly, maintaining all
         });
       }
 
+      prompt += `\n\nAlways use defined function "set_adf_fields" to return the enhanced content.`;
+
       logger.debug("[INFO] Generated enhancement prompt:", prompt);
 
       const tools: AICompletionTool[] = [
@@ -485,7 +548,7 @@ Please restructure the content to match these templates exactly, maintaining all
                 adfFields.map(([_, param]) => [
                   param.key,
                   {
-                    type: "string",
+                    type: "object",
                     description: `Content for ${param.fieldName} field in ADF-compatible markdown format`,
                   },
                 ])
@@ -497,13 +560,13 @@ Please restructure the content to match these templates exactly, maintaining all
       ];
 
       logger.debug("Tools:", JSON.stringify(tools));
+      logger.debug("Prompt:", prompt);
 
       const response = await aiClient.createChatCompletion({
         messages: [
           {
             role: "system",
-            content:
-              "You are a Jira expert who enhances content to be Atlassian Document Format (ADF) compatible. You improve content structure and formatting while preserving the original meaning, ensuring all formatting elements are ADF-compatible. You can enhance multiple related fields at once, maintaining consistency between them and with all available context. You improve the content to be more accurate and complete and fulfill good practices.",
+            content: SYSTEM_PROMPT
           },
           { role: "user", content: prompt },
         ],

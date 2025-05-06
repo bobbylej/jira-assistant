@@ -1,6 +1,6 @@
-import { AICompletionTool } from "../ai/types";
+import { AICompletionTool } from "../../../../adapters/ai/types";
 
-// Define system prompts
+// System prompt to interpret the user's command
 export const SYSTEM_PROMPT = `I'm a Jira assistant, providing expert guidance to help users manage their Jira projects and issues efficiently. Please provide your request, and I'll analyze the Jira context to deliver the most relevant and accurate response.
 
 I can perform a wide range of Jira operations, including:
@@ -33,7 +33,7 @@ Priority and Users:
 If you need to perform multiple steps, please define multiple tool calls in the same message.
 My primary objective is to leverage these Jira tools to perform actions directly, rather than simply describing possibilities. I'll always use the most appropriate function for the task at hand, and I'll provide clear explanations of what I've done or what information I've found.`;
 
-// Define tools
+// Tools used to interpret the user's command
 export const JIRA_TOOLS: AICompletionTool[] = [
   {
     type: "function",
