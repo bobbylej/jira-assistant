@@ -1,43 +1,99 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DoIt Jira Assistant</title>
-  <link rel="stylesheet" href="popup.css">
-</head>
-<body>
-  <div class="app-container">
-    <header>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DoIt Jira Assistant</title>
+    <link rel="stylesheet" href="popup.css" />
+    <script src="popup.js"></script>
+  </head>
+  <body>
+    <header class="app-header">
       <h1>DoIt Jira Assistant</h1>
+      <button id="historyBtn" class="history-btn">
+        <span class="history-icon"></span>
+      </button>
     </header>
-    
-    <div class="chat-container">
+
+    <div class="main-content">
+      <!-- Input Mode Toggle -->
+      <div class="input-mode-toggle">
+        <button id="voiceModeBtn" class="mode-btn active">
+          <span class="mode-icon voice-icon"></span>
+          Voice
+        </button>
+        <button id="textModeBtn" class="mode-btn">
+          <span class="mode-icon text-icon"></span>
+          Text
+        </button>
+      </div>
+
+      <!-- Voice Input Mode -->
+      <div id="voiceInputMode" class="input-mode active">
+        <div class="mic-container">
+          <button id="recordButton" class="record-button">
+            <span class="record-icon"></span>
+            <span class="record-text">Hold to Speak</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Text Input Mode -->
+      <div id="textInputMode" class="input-mode">
+        <div class="text-input-container">
+          <textarea id="textInput" placeholder="Type your command..." rows="3"></textarea>
+          <button id="sendButton" class="send-button">
+            <span class="send-icon"></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Action Summary Panel -->
+      <div class="action-panel">
+        <div class="action-list" id="actionList">
+          <!-- Actions will be dynamically inserted here -->
+        </div>
+
+        <div class="action-buttons">
+          <button id="applyAllBtn" class="action-btn apply-all">
+            Apply All
+          </button>
+          <button id="rejectAllBtn" class="action-btn reject-all">
+            Reject All
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Jira Context Bubble -->
+    <div class="context-bubble" id="contextBubble">
+      <div class="context-preview">
+        <span class="project-key"></span>
+        <span class="issue-key"></span>
+      </div>
+      <div class="context-expanded" id="contextExpanded">
+        <div class="context-content" id="contextContent"></div>
+      </div>
+    </div>
+
+    <!-- Chat History Panel (Hidden by default) -->
+    <div class="chat-panel" id="chatPanel">
       <div class="chat-header">
-        <button id="clearChatBtn" class="clear-chat-btn">Clear Chat</button>
+        <h2>Chat History</h2>
+        <div class="chat-header-actions">
+          <button id="clearChatBtn" class="clear-chat-btn" title="Clear chat history">
+            <span class="clear-icon"></span>
+          </button>
+          <button id="closeHistoryBtn" class="close-btn">×</button>
+        </div>
       </div>
       <div class="chat-messages" id="chatMessages"></div>
-      
-      <div id="loadingIndicator" class="loading-indicator">
-        <div class="loading-spinner"></div>
-        <span>Processing...</span>
-      </div>
-      
-      <div class="input-container">
-        <button id="recordButton" class="record-button">
-          <span class="record-icon"></span>
-        </button>
-        <textarea type="text" id="textInput" placeholder="Type your command..."></textarea>
-        <button id="sendButton">Send</button>
-      </div>
     </div>
-    
-    <div class="context-info" id="contextInfo">
-      <div class="context-header">Current Jira Context</div>
-      <div class="context-content" id="contextContent">Not connected to Jira</div>
+
+    <!-- Loading Indicator -->
+    <div id="loadingIndicator" class="loading-indicator">
+      <div class="loading-spinner"></div>
+      <span>Processing...</span>
     </div>
-  </div>
-  
-  <script src="popup.js"></script>
-</body>
-</html> 
+  </body>
+</html>

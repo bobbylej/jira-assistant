@@ -5,23 +5,33 @@ document.addEventListener("DOMContentLoaded", () => {
   const sendButton = document.getElementById("sendButton");
   const recordButton = document.getElementById("recordButton");
   const loadingIndicator = document.getElementById("loadingIndicator");
-  const contextContent = document.getElementById("contextContent");
+  const contextBubble = document.getElementById("contextBubble");
+  const chatPanel = document.getElementById("chatPanel");
+  const historyBtn = document.getElementById("historyBtn");
+  const closeHistoryBtn = document.getElementById("closeHistoryBtn");
+  const actionList = document.getElementById("actionList");
+  const applyAllBtn = document.getElementById("applyAllBtn");
+  const rejectAllBtn = document.getElementById("rejectAllBtn");
+  const voiceModeBtn = document.getElementById("voiceModeBtn");
+  const textModeBtn = document.getElementById("textModeBtn");
+  const voiceInputMode = document.getElementById("voiceInputMode");
+  const textInputMode = document.getElementById("textInputMode");
   const clearChatBtn = document.getElementById("clearChatBtn");
 
   // State variables
   let isRecording = false;
   let jiraContext = null;
+  let pendingActions = new Map();
 
   // Initialize
   init();
 
   // Event listeners
-  sendButton.addEventListener("click", handleSendMessage);
+  sendButton.addEventListener("click", () => handleSendMessage(textInput.value));
   textInput.addEventListener("keypress", (e) => {
-    console.log("keypress", e.key, e.shiftKey);
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSendMessage();
+      handleSendMessage(textInput.value);
     }
   });
   recordButton.addEventListener("mousedown", startRecording);
@@ -29,7 +39,29 @@ document.addEventListener("DOMContentLoaded", () => {
   recordButton.addEventListener("mouseleave", () => {
     if (isRecording) stopRecording();
   });
+  historyBtn.addEventListener("click", toggleChatHistory);
+  closeHistoryBtn.addEventListener("click", toggleChatHistory);
+  applyAllBtn.addEventListener("click", handleApplyAll);
+  rejectAllBtn.addEventListener("click", handleRejectAll);
+  voiceModeBtn.addEventListener("click", () => switchInputMode("voice"));
+  textModeBtn.addEventListener("click", () => switchInputMode("text"));
   clearChatBtn.addEventListener("click", clearChat);
+
+  // Input mode switching
+  function switchInputMode(mode) {
+    if (mode === "voice") {
+      voiceModeBtn.classList.add("active");
+      textModeBtn.classList.remove("active");
+      voiceInputMode.classList.add("active");
+      textInputMode.classList.remove("active");
+    } else {
+      voiceModeBtn.classList.remove("active");
+      textModeBtn.classList.add("active");
+      voiceInputMode.classList.remove("active");
+      textInputMode.classList.add("active");
+      textInput.focus();
+    }
+  }
 
   // Core functions
   async function init() {
@@ -132,45 +164,44 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function updateContextDisplay() {
     if (!jiraContext) {
-      contextContent.textContent = "Not connected to Jira";
+      contextBubble.style.display = "none";
       return;
     }
 
-    let contextHtml = '<div class="jira-context">';
+    contextBubble.style.display = "block";
+    const preview = contextBubble.querySelector(".context-preview");
+    const expanded = contextBubble.querySelector(".context-expanded");
 
-    // Show project info
+    // Update preview
+    let previewHtml = "";
     if (jiraContext.projectKey) {
-      contextHtml += `<div class="context-item">Project: <span class="issue-key">${jiraContext.projectKey}</span></div>`;
+      previewHtml += `<span class="project-key">${jiraContext.projectKey}</span>`;
     }
-
-    // Show issue key if available
     if (jiraContext.issueKey) {
-      contextHtml += `<div class="context-item">Issue: <span class="issue-key">${jiraContext.issueKey}</span></div>`;
+      previewHtml += `<span class="issue-key">${jiraContext.issueKey}</span>`;
+    }
+    preview.innerHTML = previewHtml;
 
-      // Show summary if available
+    // Update expanded view
+    let expandedHtml = '<div class="context-details">';
+    if (jiraContext.projectKey) {
+      expandedHtml += `<div class="context-item">Project: <span class="issue-key">${jiraContext.projectKey}</span></div>`;
+    }
+    if (jiraContext.issueKey) {
+      expandedHtml += `<div class="context-item">Issue: <span class="issue-key">${jiraContext.issueKey}</span></div>`;
       if (jiraContext.issueSummary) {
-        contextHtml += `<div class="context-item">Summary: ${jiraContext.issueSummary}</div>`;
+        expandedHtml += `<div class="context-item">Summary: ${jiraContext.issueSummary}</div>`;
       }
     }
-
-    // Show board info if available
     if (jiraContext.boardId) {
-      contextHtml += `<div class="context-item">Board: <span class="board-id">${jiraContext.boardId}</span>`;
+      expandedHtml += `<div class="context-item">Board: <span class="board-id">${jiraContext.boardId}</span>`;
       if (jiraContext.boardType) {
-        contextHtml += ` (${jiraContext.boardType})`;
+        expandedHtml += ` (${jiraContext.boardType})`;
       }
-      contextHtml += `</div>`;
+      expandedHtml += `</div>`;
     }
-
-    contextHtml += "</div>";
-
-    // Update the context content
-    contextContent.innerHTML = contextHtml || "Connected to Jira";
-
-    // Update the chat input placeholder based on context
-    if (jiraContext.issueKey && textInput) {
-      textInput.placeholder = `Ask about ${jiraContext.issueKey}...`;
-    }
+    expandedHtml += "</div>";
+    expanded.innerHTML = expandedHtml;
   }
 
   function parseChatHistory(chatHistory) {
@@ -192,24 +223,24 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Message handling
-  async function handleSendMessage() {
-    const text = textInput.value.trim();
+  async function handleSendMessage(text) {
     if (!text) return;
 
-    textInput.value = "";
+    // Clear text input if it was used
+    if (textInput.value) {
+      textInput.value = "";
+    }
+
     addMessage("user", text);
     showLoading();
 
     try {
       const chatHistory = await getChatHistory();
-      console.log("Chat history:", chatHistory);
       const requestData = {
         text: text,
         context: jiraContext || null,
         chatHistory: chatHistory ? parseChatHistory(chatHistory) : [],
       };
-
-      console.log("Sending request:", requestData);
 
       const response = await fetchWithTimeout(
         `${API_URL}/interpret`,
@@ -222,7 +253,6 @@ document.addEventListener("DOMContentLoaded", () => {
       );
 
       const data = await response.json();
-      console.log("Interpret response:", data);
 
       if (data.action) {
         if (data.action.parameters.actions) {
@@ -239,11 +269,8 @@ document.addEventListener("DOMContentLoaded", () => {
               ...action,
               id: generateActionId(),
             }));
-          await addMessage(
-            "assistant",
-            `Review and approve the following actions before executing them.`,
-            { actions: actionsToApprove }
-          );
+          
+          actionsToApprove.forEach(action => addActionToPanel(action));
         } else {
           await handleAction(data.action);
         }
@@ -263,121 +290,96 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 
-  // Store actions in memory with their IDs
-  const pendingActions = new Map();
+  function toggleChatHistory() {
+    console.log("toggleChatHistory", chatPanel.classList);
+    
+    if (chatPanel.classList.contains("visible")) {
+      chatPanel.classList.remove("visible");
+    } else {
+      chatPanel.classList.add("visible");
+    }
+  }
 
-  async function addActionToDOM(action) {
-    const messageElement = document.createElement("div");
-    messageElement.classList.add(
-      "message",
-      "assistant-message",
-      "action-message"
-    );
+  function createActionElement(action) {
+    const actionElement = document.createElement("div");
+    actionElement.classList.add("action-item");
+    actionElement.dataset.actionId = action.id;
 
-    // Store the action in our map
+    // Create header
+    const header = document.createElement("div");
+    header.classList.add("action-header");
+    const actionType = action.actionType.replace(/([A-Z])/g, " $1").replace(/^./, str => str.toUpperCase());
+    header.innerHTML = `
+      <span class="action-type">${actionType}</span>
+      <div class="action-controls">
+        <button class="action-btn approve">✓</button>
+        <button class="action-btn reject">✕</button>
+      </div>
+    `;
+
+    // Create content
+    const content = document.createElement("div");
+    content.classList.add("action-content");
+    content.innerHTML = Object.entries(action.parameters)
+      .map(([key, value]) => `
+        <div class="param-row">
+          <span class="param-name">${key.replace(/([A-Z])/g, " $1").replace(/^./, str => str.toUpperCase())}:</span>
+          <span class="param-value">${typeof value === "object" ? JSON.stringify(value, null, 2) : value}</span>
+        </div>
+      `).join("");
+
+    actionElement.appendChild(header);
+    actionElement.appendChild(content);
+
+    // Add event listeners
+    header.querySelector(".approve").addEventListener("click", () => handleAction(action));
+    header.querySelector(".reject").addEventListener("click", () => removeAction(action.id));
+
+    return actionElement;
+  }
+
+  function addActionToPanel(action) {
+    const actionElement = createActionElement(action);
+    actionList.appendChild(actionElement);
     pendingActions.set(action.id, action);
-
-    // Create action header with humanized action type
-    const actionHeader = document.createElement("div");
-    actionHeader.classList.add("action-header");
-
-    // Convert camelCase to Title Case with spaces
-    const humanizedActionType = action.actionType
-      .replace(/([A-Z])/g, " $1")
-      .replace(/^./, (str) => str.toUpperCase());
-
-    actionHeader.innerHTML = `<strong>${humanizedActionType}</strong>`;
-    messageElement.appendChild(actionHeader);
-
-    // Create parameters section
-    const paramsContainer = document.createElement("div");
-    paramsContainer.classList.add("action-parameters");
-
-    // Display each parameter in a readable format
-    Object.entries(action.parameters).forEach(([key, value]) => {
-      const paramRow = document.createElement("div");
-      paramRow.classList.add("param-row");
-
-      // Convert camelCase parameter name to readable format
-      const readableKey = key
-        .replace(/([A-Z])/g, " $1")
-        .replace(/^./, (str) => str.toUpperCase());
-
-      let valueDisplay = "";
-
-      // Format the value based on its type
-      if (typeof value === "object" && value !== null) {
-        valueDisplay = `<pre>${JSON.stringify(value, null, 2)}</pre>`;
-      } else {
-        valueDisplay = String(value);
-      }
-
-      paramRow.innerHTML = `<span class="param-name">${readableKey}:</span> <span class="param-value">${valueDisplay}</span>`;
-      paramsContainer.appendChild(paramRow);
-    });
-
-    messageElement.appendChild(paramsContainer);
-
-    // Add approve button
-    const approveButton = document.createElement("button");
-    approveButton.classList.add("approve-action-btn");
-    approveButton.textContent = "Approve & Execute";
-    approveButton.setAttribute("data-action-id", action.id);
-
-    // Add button container
-    const buttonContainer = document.createElement("div");
-    buttonContainer.classList.add("action-buttons");
-    buttonContainer.appendChild(approveButton);
-    messageElement.appendChild(buttonContainer);
-
-    chatMessages.appendChild(messageElement);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-
-    return action.id;
   }
 
-  function convertIssuesToDOM(issues) {
-    const issuesElement = document.createElement("div");
-    issuesElement.classList.add("issues");
-    issues
-      .map((issue) => convertIssueToDOM(issue))
-      .forEach((issue) => issuesElement.appendChild(issue));
-    return issuesElement;
+  function removeAction(actionId) {
+    const actionElement = actionList.querySelector(`[data-action-id="${actionId}"]`);
+    if (actionElement) {
+      actionElement.remove();
+      pendingActions.delete(actionId);
+    }
   }
 
-  function convertIssueToDOM(issue) {
-    const issueElement = document.createElement("div");
-    issueElement.classList.add("issue");
-    let innerHTML = `<div class="issue-header">`;
-    innerHTML += `<a href="#" class="issue-key-link" data-issue-key="${issue.key}">${issue.key}</a>`;
-    innerHTML += `<button class="delete-issue-btn" data-issue-key="${issue.key}">Delete</button>`;
-    innerHTML += `</div>`;
+  async function handleApplyAll() {
+    for (const [actionId, action] of pendingActions) {
+      await handleAction(action);
+    }
+  }
 
-    if (issue.fields?.summary)
-      innerHTML += `<span class="issue-summary">${issue.fields?.summary}</span>`;
-    if (issue.fields?.status)
-      innerHTML += `<span class="issue-status">Status: ${issue.fields?.status?.name}</span>`;
-    if (issue.fields?.issuetype)
-      innerHTML += `<span class="issue-type">Type: ${issue.fields?.issuetype?.name}</span>`;
-    if (issue.fields?.assignee)
-      innerHTML += `<span class="issue-assignee">Assignee: ${issue.fields?.assignee?.displayName}</span>`;
-    issueElement.innerHTML = innerHTML;
-
-    return issueElement;
+  function handleRejectAll() {
+    pendingActions.clear();
+    actionList.innerHTML = "";
   }
 
   function addMessageToDOM(role, content, issues = null) {
     const messageElement = document.createElement("div");
     messageElement.classList.add("message");
 
+    // Add role-specific class and label
+    let roleLabel = '';
     if (role === "user") {
       messageElement.classList.add("user-message");
+      roleLabel = '<span class="role-label">You</span>';
     } else {
       messageElement.classList.add("assistant-message");
+      roleLabel = '<span class="role-label">Agent</span>';
     }
-    messageElement.textContent = content;
 
-    if (issues) {
+    messageElement.innerHTML = `${roleLabel}${content}`;
+
+    if (issues && issues.length > 0) {
       const issuesDOM = convertIssuesToDOM(issues);
       if (issuesDOM) {
         messageElement.appendChild(issuesDOM);
@@ -385,6 +387,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     chatMessages.appendChild(messageElement);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
   }
 
   async function saveMessageToStorage(role, content, data = {}) {
@@ -452,11 +455,6 @@ document.addEventListener("DOMContentLoaded", () => {
     } finally {
       hideLoading();
     }
-  }
-
-  async function clearChat() {
-    chatMessages.innerHTML = "";
-    await chrome.storage.local.remove(["chatHistory", "actionStatuses"]);
   }
 
   // Utility functions
@@ -819,7 +817,7 @@ document.addEventListener("DOMContentLoaded", () => {
       // Add each action that requires approval
       data.actions.forEach(async (action) => {
         if (action.approveRequired) {
-          await addActionToDOM(action);
+          await addActionToPanel(action);
         }
       });
     } else {
@@ -873,6 +871,14 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (error) {
       console.error("Error loading action statuses:", error);
       return {};
+    }
+  }
+
+  async function clearChat() {
+    if (confirm("Are you sure you want to clear the chat history?")) {
+      chatMessages.innerHTML = "";
+      await chrome.storage.local.remove(["chatHistory", "actionStatuses"]);
+      addMessage("assistant", "Chat history has been cleared.");
     }
   }
 });
@@ -1017,4 +1023,34 @@ function convertJiraContextToText(context) {
   contextText += "- Provide information about Jira concepts\n";
 
   return contextText.trim();
+}
+
+function convertIssuesToDOM(issues) {
+  const issuesElement = document.createElement("div");
+  issuesElement.classList.add("issues");
+  issues
+    .map((issue) => convertIssueToDOM(issue))
+    .forEach((issue) => issuesElement.appendChild(issue));
+  return issuesElement;
+}
+
+function convertIssueToDOM(issue) {
+  const issueElement = document.createElement("div");
+  issueElement.classList.add("issue");
+  let innerHTML = `<div class="issue-header">`;
+  innerHTML += `<a href="#" class="issue-key-link" data-issue-key="${issue.key}">${issue.key}</a>`;
+  innerHTML += `<button class="delete-issue-btn" data-issue-key="${issue.key}">Delete</button>`;
+  innerHTML += `</div>`;
+
+  if (issue.fields?.summary)
+    innerHTML += `<span class="issue-summary">${issue.fields?.summary}</span>`;
+  if (issue.fields?.status)
+    innerHTML += `<span class="issue-status">Status: ${issue.fields?.status?.name}</span>`;
+  if (issue.fields?.issuetype)
+    innerHTML += `<span class="issue-type">Type: ${issue.fields?.issuetype?.name}</span>`;
+  if (issue.fields?.assignee)
+    innerHTML += `<span class="issue-assignee">Assignee: ${issue.fields?.assignee?.displayName}</span>`;
+  issueElement.innerHTML = innerHTML;
+
+  return issueElement;
 }
