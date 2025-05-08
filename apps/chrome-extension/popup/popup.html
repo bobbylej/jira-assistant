@@ -48,19 +48,14 @@
         </div>
       </div>
 
-      <!-- Action Summary Panel -->
-      <div class="action-panel">
-        <div class="action-list" id="actionList">
-          <!-- Actions will be dynamically inserted here -->
+      <!-- Action Summary Panel (fixed bottom) -->
+      <div class="action-panel-fixed">
+        <div class="action-buttons-row">
+          <button id="applyAllBtn" class="action-link-btn apply-all-link">Accept All</button>
+          <button id="rejectAllBtn" class="action-link-btn reject-all-link">Reject All</button>
         </div>
-
-        <div class="action-buttons">
-          <button id="applyAllBtn" class="action-btn apply-all">
-            Apply All
-          </button>
-          <button id="rejectAllBtn" class="action-btn reject-all">
-            Reject All
-          </button>
+        <div class="action-list compact" id="actionList">
+          <!-- Actions will be dynamically inserted here as compact rows -->
         </div>
       </div>
     </div>

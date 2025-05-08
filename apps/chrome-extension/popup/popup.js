@@ -300,48 +300,182 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function createActionElement(action) {
-    const actionElement = document.createElement("div");
-    actionElement.classList.add("action-item");
-    actionElement.dataset.actionId = action.id;
-
-    // Create header
-    const header = document.createElement("div");
-    header.classList.add("action-header");
-    const actionType = action.actionType.replace(/([A-Z])/g, " $1").replace(/^./, str => str.toUpperCase());
-    header.innerHTML = `
-      <span class="action-type">${actionType}</span>
-      <div class="action-controls">
-        <button class="action-btn approve">✓</button>
-        <button class="action-btn reject">✕</button>
-      </div>
-    `;
-
-    // Create content
-    const content = document.createElement("div");
-    content.classList.add("action-content");
-    content.innerHTML = Object.entries(action.parameters)
-      .map(([key, value]) => `
-        <div class="param-row">
-          <span class="param-name">${key.replace(/([A-Z])/g, " $1").replace(/^./, str => str.toUpperCase())}:</span>
-          <span class="param-value">${typeof value === "object" ? JSON.stringify(value, null, 2) : value}</span>
-        </div>
-      `).join("");
-
-    actionElement.appendChild(header);
-    actionElement.appendChild(content);
-
-    // Add event listeners
-    header.querySelector(".approve").addEventListener("click", () => handleAction(action));
-    header.querySelector(".reject").addEventListener("click", () => removeAction(action.id));
-
-    return actionElement;
+  function getActionIcon(actionType) {
+    switch (actionType) {
+      case 'createIssue': return '📝';
+      case 'updateIssue': return '✏️';
+      case 'deleteIssue': return '🗑️';
+      case 'commentIssue': return '💬';
+      default: return '⚡';
+    }
   }
 
+  function getActionSummary(action) {
+    // Show action type and key info (e.g., issue key or summary)
+    let summary = action.actionType.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+    if (action.parameters && action.parameters.issueKey) {
+      summary += `: ${action.parameters.issueKey}`;
+    } else if (action.parameters && action.parameters.summary) {
+      summary += `: ${action.parameters.summary}`;
+    }
+    return summary;
+  }
+
+  let expandedActionId = null;
+
   function addActionToPanel(action) {
-    const actionElement = createActionElement(action);
-    actionList.appendChild(actionElement);
+    // Remove existing row if present (for re-render)
+    const existing = actionList.querySelector(`[data-action-id="${action.id}"]`);
+    if (existing) existing.remove();
+
+    const row = document.createElement('div');
+    row.className = 'action-row';
+    row.dataset.actionId = action.id;
+    row.dataset.status = 'pending';
+
+    const main = document.createElement('div');
+    main.className = 'action-main';
+    row.appendChild(main);
+
+    // Icon
+    const icon = document.createElement('span');
+    icon.className = 'action-icon';
+    icon.textContent = getActionIcon(action.actionType);
+    main.appendChild(icon);
+
+    // Summary
+    const summary = document.createElement('span');
+    summary.className = 'action-summary';
+    summary.textContent = getActionSummary(action);
+    main.appendChild(summary);
+
+    // Status dot
+    const statusDot = document.createElement('span');
+    statusDot.className = 'action-status-dot';
+    main.appendChild(statusDot);
+
+    // Controls
+    const controls = document.createElement('div');
+    controls.className = 'action-controls';
+    // Approve (check)
+    const approveBtn = document.createElement('button');
+    approveBtn.className = 'action-btn-icon';
+    approveBtn.title = 'Approve & Execute';
+    approveBtn.innerHTML = '✔️';
+    approveBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      handleAction(action, action.id);
+    });
+    // Reject (cross)
+    const rejectBtn = document.createElement('button');
+    rejectBtn.className = 'action-btn-icon';
+    rejectBtn.title = 'Reject';
+    rejectBtn.innerHTML = '✖️';
+    rejectBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      removeAction(action.id);
+    });
+    controls.appendChild(approveBtn);
+    controls.appendChild(rejectBtn);
+    main.appendChild(controls);
+
+    // Expand/collapse details
+    row.addEventListener('click', () => {
+      if (expandedActionId === action.id) {
+        expandedActionId = null;
+        renderActionDetails(null);
+      } else {
+        expandedActionId = action.id;
+        renderActionDetails(action);
+      }
+      // Collapse/expand all rows
+      Array.from(actionList.children).forEach(child => {
+        if (child.dataset.actionId !== expandedActionId) {
+          const details = child.querySelector('.action-details-expanded');
+          if (details) details.remove();
+          child.classList.remove('expanded');
+        }
+      });
+    });
+
+    actionList.appendChild(row);
+    // If this is the expanded action, show details
+    if (expandedActionId === action.id) {
+      renderActionDetails(action);
+    }
     pendingActions.set(action.id, action);
+  }
+
+  function renderActionDetails(action) {
+    // Remove all details panels
+    Array.from(actionList.children).forEach(child => {
+      const details = child.querySelector('.action-details-expanded');
+      if (details) details.remove();
+      child.classList.remove('expanded');
+    });
+    if (!action) return;
+    const row = actionList.querySelector(`[data-action-id="${action.id}"]`);
+    if (!row) return;
+    row.classList.add('expanded');
+
+    // Create expanded details container
+    const details = document.createElement('div');
+    details.className = 'action-details-expanded';
+
+    // Top row: icon, status, controls
+    const topRow = document.createElement('div');
+    topRow.className = 'action-details-toprow';
+
+    // Icon
+    const icon = document.createElement('span');
+    icon.className = 'action-icon';
+    icon.textContent = getActionIcon(action.actionType);
+    topRow.appendChild(icon);
+
+    // Status dot
+    const statusDot = document.createElement('span');
+    statusDot.className = 'action-status-dot';
+    topRow.appendChild(statusDot);
+
+    // Controls
+    const controls = document.createElement('div');
+    controls.className = 'action-controls';
+    // Approve (check)
+    const approveBtn = document.createElement('button');
+    approveBtn.className = 'action-btn-icon';
+    approveBtn.title = 'Approve & Execute';
+    approveBtn.innerHTML = '✔️';
+    approveBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      handleAction(action, action.id);
+    });
+    // Reject (cross)
+    const rejectBtn = document.createElement('button');
+    rejectBtn.className = 'action-btn-icon';
+    rejectBtn.title = 'Reject';
+    rejectBtn.innerHTML = '✖️';
+    rejectBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      removeAction(action.id);
+    });
+    controls.appendChild(approveBtn);
+    controls.appendChild(rejectBtn);
+    topRow.appendChild(controls);
+
+    details.appendChild(topRow);
+
+    // Details table
+    const detailsPanel = document.createElement('div');
+    detailsPanel.className = 'action-details';
+    let html = '<table class="action-details-table">';
+    for (const [key, value] of Object.entries(action.parameters)) {
+      html += `<tr><td>${key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</td><td>${typeof value === 'object' ? JSON.stringify(value, null, 2) : value}</td></tr>`;
+    }
+    html += '</table>';
+    detailsPanel.innerHTML = html;
+    details.appendChild(detailsPanel);
+
+    row.appendChild(details);
   }
 
   function removeAction(actionId) {
@@ -349,6 +483,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (actionElement) {
       actionElement.remove();
       pendingActions.delete(actionId);
+      if (expandedActionId === actionId) expandedActionId = null;
     }
   }
 
