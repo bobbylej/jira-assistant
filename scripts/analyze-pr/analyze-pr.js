@@ -256,7 +256,6 @@ async function main(gitDiff, jiraDetails) {
     validateInputs(gitDiff, jiraDetails);
 
     // Analyze PR using Claude
-    console.log("Analyzing pull request changes...");
     const analysis = await analyzePR(gitDiff, jiraDetails);
 
     // Output the analysis
