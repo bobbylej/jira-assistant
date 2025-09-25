@@ -305,7 +305,7 @@ document.addEventListener("DOMContentLoaded", () => {
       case 'createIssue': return '📝';
       case 'updateIssue': return '✏️';
       case 'deleteIssue': return '🗑️';
-      case 'commentIssue': return '💬';
+      case 'addComment': return '💬';
       default: return '⚡';
     }
   }
