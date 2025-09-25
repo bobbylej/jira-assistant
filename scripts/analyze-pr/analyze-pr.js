@@ -1,37 +1,41 @@
 #!/usr/bin/env node
 
 /**
- * Script to analyze pull request changes using Google Claude API
+ * Script to analyze pull request changes using OpenAI or Claude API
  * Usage: node analyze-pr.js <git_diff> <jira_details>
  * Example: node analyze-pr.js "$(cat diff.txt)" "$(cat jira.md)"
+ *
+ * Requires either OPEN_AI_API_KEY or CLAUDE_API_KEY environment variable.
+ * OpenAI is preferred if both are available.
  */
 
-const https = require("https");
-const http = require("http");
-const { URL } = require("url");
+const https = require('https');
+const http = require('http');
+const { URL } = require('url');
 
 // Configuration
 const CONFIG = {
   timeout: 60000, // 60 seconds for AI processing
-  userAgent: "PR-Analysis-Script/1.0",
-  claudeApiUrl: "https://api.anthropic.com/v1/messages",
+  userAgent: 'PR-Analysis-Script/1.0',
+  claudeApiUrl: 'https://api.anthropic.com/v1/messages',
+  openaiApiUrl: 'https://api.openai.com/v1/chat/completions',
   maxTokens: 4000,
-  model: "claude-sonnet-4-20250514",
+  claudeModel: 'claude-sonnet-4-20250514',
+  openaiModel: 'gpt-4o',
 };
 
 /**
  * Display usage information
  */
 function usage() {
-  console.log("Usage: node analyze-pr.js <git_diff> <jira_details>");
-  console.log(
-    'Example: node analyze-pr.js "$(git diff)" "$(cat jira-details.md)"'
-  );
-  console.log("");
-  console.log("Required environment variables:");
-  console.log("  CLAUDE_API_KEY - Your Anthropic Claude API key");
-  console.log("");
-  console.log("Optional environment variables:");
+  console.log('Usage: node analyze-pr.js <git_diff> <jira_details>');
+  console.log('Example: node analyze-pr.js "$(git diff)" "$(cat jira-details.md)"');
+  console.log('');
+  console.log('Required environment variables (at least one):');
+  console.log('  CLAUDE_API_KEY - Your Anthropic Claude API key');
+  console.log('  OPEN_AI_API_KEY - Your OpenAI API key');
+  console.log('');
+  console.log('Optional environment variables:');
   console.log('  DEBUG - Set to "true" to enable debug output');
   process.exit(1);
 }
@@ -40,12 +44,13 @@ function usage() {
  * Check if required environment variables are set
  */
 function checkEnvironment() {
-  const required = ["CLAUDE_API_KEY"];
-  const missing = required.filter((key) => !process.env[key]);
+  const hasClaudeKey = !!process.env.CLAUDE_API_KEY;
+  const hasOpenAIKey = !!process.env.OPEN_AI_API_KEY;
 
-  if (missing.length > 0) {
-    console.error("Error: Required environment variables not set:");
-    missing.forEach((key) => console.error(`  ${key}`));
+  if (!hasClaudeKey && !hasOpenAIKey) {
+    console.error('Error: At least one API key must be provided:');
+    console.error('  CLAUDE_API_KEY - Your Anthropic Claude API key');
+    console.error('  OPEN_AI_API_KEY - Your OpenAI API key');
     process.exit(1);
   }
 }
@@ -65,36 +70,32 @@ async function claudeApiCall(payload) {
       hostname: url.hostname,
       port: url.port || 443,
       path: url.pathname,
-      method: "POST",
+      method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "Content-Length": Buffer.byteLength(postData),
-        "User-Agent": CONFIG.userAgent,
-        "anthropic-version": "2023-06-01",
-        "x-api-key": apiKey,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(postData),
+        'User-Agent': CONFIG.userAgent,
+        'anthropic-version': '2023-06-01',
+        'x-api-key': apiKey,
       },
       timeout: CONFIG.timeout,
     };
 
     const req = https.request(options, (res) => {
-      let data = "";
+      let data = '';
 
-      res.on("data", (chunk) => {
+      res.on('data', (chunk) => {
         data += chunk;
       });
 
-      res.on("end", () => {
+      res.on('end', () => {
         try {
           const jsonData = JSON.parse(data);
           if (res.statusCode >= 200 && res.statusCode < 300) {
             resolve(jsonData);
           } else {
-            reject(
-              new Error(
-                `HTTP ${res.statusCode}: ${jsonData.error?.message || data}`
-              )
-            );
+            reject(new Error(`HTTP ${res.statusCode}: ${jsonData.error?.message || data}`));
           }
         } catch (error) {
           reject(new Error(`Failed to parse response: ${error.message}`));
@@ -102,13 +103,73 @@ async function claudeApiCall(payload) {
       });
     });
 
-    req.on("error", (error) => {
+    req.on('error', (error) => {
       reject(new Error(`Request failed: ${error.message}`));
     });
 
-    req.on("timeout", () => {
+    req.on('timeout', () => {
       req.destroy();
-      reject(new Error("Request timeout"));
+      reject(new Error('Request timeout'));
+    });
+
+    req.write(postData);
+    req.end();
+  });
+}
+
+/**
+ * Make authenticated HTTP request to OpenAI API
+ * @param {Object} payload - Request payload
+ * @returns {Promise<Object>} Response data
+ */
+async function openAIApiCall(payload) {
+  return new Promise((resolve, reject) => {
+    const url = new URL(CONFIG.openaiApiUrl);
+    const postData = JSON.stringify(payload);
+    const apiKey = process.env.OPEN_AI_API_KEY;
+
+    const options = {
+      hostname: url.hostname,
+      port: url.port || 443,
+      path: url.pathname,
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(postData),
+        'User-Agent': CONFIG.userAgent,
+      },
+      timeout: CONFIG.timeout,
+    };
+
+    const req = https.request(options, (res) => {
+      let data = '';
+
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+
+      res.on('end', () => {
+        try {
+          const jsonData = JSON.parse(data);
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            resolve(jsonData);
+          } else {
+            reject(new Error(`HTTP ${res.statusCode}: ${jsonData.error?.message || data}`));
+          }
+        } catch (error) {
+          reject(new Error(`Failed to parse response: ${error.message}`));
+        }
+      });
+    });
+
+    req.on('error', (error) => {
+      reject(new Error(`Request failed: ${error.message}`));
+    });
+
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('Request timeout'));
     });
 
     req.write(postData);
@@ -172,44 +233,80 @@ Please be thorough but concise. Focus on actionable insights that will help the 
 }
 
 /**
- * Analyze PR using Claude API
+ * Analyze PR using AI API (OpenAI or Claude)
  * @param {string} gitDiff - Git diff content
  * @param {string} jiraDetails - Jira ticket details
  * @returns {Promise<string>} Analysis result
  */
 async function analyzePR(gitDiff, jiraDetails) {
-  if (process.env.DEBUG === "true") {
-    console.log("Creating analysis prompt...");
+  if (process.env.DEBUG === 'true') {
+    console.log('Creating analysis prompt...');
   }
 
   const prompt = createAnalysisPrompt(gitDiff, jiraDetails);
+  const hasOpenAIKey = !!process.env.OPEN_AI_API_KEY;
+  const hasClaudeKey = !!process.env.CLAUDE_API_KEY;
 
-  const payload = {
-    model: CONFIG.model,
-    max_tokens: CONFIG.maxTokens,
-    messages: [
-      {
-        role: "user",
-        content: prompt,
-      },
-    ],
-  };
+  // Prefer OpenAI if available, otherwise use Claude
+  const useOpenAI = hasOpenAIKey;
 
-  if (process.env.DEBUG === "true") {
-    console.log("Sending request to Claude API...");
-    console.log("Payload:", JSON.stringify(payload, null, 2));
+  if (process.env.DEBUG === 'true') {
+    console.log(`Using ${useOpenAI ? 'OpenAI' : 'Claude'} API for analysis`);
+  }
+
+  let payload;
+  let apiCall;
+
+  if (useOpenAI) {
+    payload = {
+      model: CONFIG.openaiModel,
+      max_tokens: CONFIG.maxTokens,
+      messages: [
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+    };
+    apiCall = openAIApiCall;
+  } else {
+    payload = {
+      model: CONFIG.claudeModel,
+      max_tokens: CONFIG.maxTokens,
+      messages: [
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+    };
+    apiCall = claudeApiCall;
+  }
+
+  if (process.env.DEBUG === 'true') {
+    console.log(`Sending request to ${useOpenAI ? 'OpenAI' : 'Claude'} API...`);
+    console.log('Payload:', JSON.stringify(payload, null, 2));
   }
 
   try {
-    const response = await claudeApiCall(payload);
+    const response = await apiCall(payload);
 
-    if (process.env.DEBUG === "true") {
-      console.log("Claude API response:", JSON.stringify(response, null, 2));
+    if (process.env.DEBUG === 'true') {
+      console.log(
+        `${useOpenAI ? 'OpenAI' : 'Claude'} API response:`,
+        JSON.stringify(response, null, 2),
+      );
     }
 
-    return response.content[0].text;
+    // Extract response text based on API type
+    if (useOpenAI) {
+      return response.choices[0].message.content;
+    } else {
+      return response.content[0].text;
+    }
   } catch (error) {
-    throw new Error(`Claude API analysis failed: ${error.message}`);
+    const apiName = useOpenAI ? 'OpenAI' : 'Claude';
+    throw new Error(`${apiName} API analysis failed: ${error.message}`);
   }
 }
 
@@ -220,12 +317,12 @@ async function analyzePR(gitDiff, jiraDetails) {
  */
 function validateInputs(gitDiff, jiraDetails) {
   if (!gitDiff || gitDiff.trim().length === 0) {
-    throw new Error("Git diff is empty or not provided");
+    throw new Error('Git diff is empty or not provided');
   }
 
   if (!jiraDetails || jiraDetails.trim().length === 0) {
     console.warn(
-      "Warning: Jira details are empty or not provided. Analysis will be based on git diff only."
+      'Warning: Jira details are empty or not provided. Analysis will be based on git diff only.',
     );
   }
 
@@ -233,9 +330,7 @@ function validateInputs(gitDiff, jiraDetails) {
   const estimatedTokens = (gitDiff.length + jiraDetails.length) / 4; // Rough estimation
   if (estimatedTokens > 100000) {
     // Conservative limit
-    throw new Error(
-      "Input is too large for analysis. Please provide a smaller diff or summary."
-    );
+    throw new Error('Input is too large for analysis. Please provide a smaller diff or summary.');
   }
 }
 
@@ -246,10 +341,10 @@ function validateInputs(gitDiff, jiraDetails) {
  */
 async function main(gitDiff, jiraDetails) {
   try {
-    if (process.env.DEBUG === "true") {
-      console.log("Starting PR analysis...");
-      console.log("Git diff length:", gitDiff.length);
-      console.log("Jira details length:", jiraDetails.length);
+    if (process.env.DEBUG === 'true') {
+      console.log('Starting PR analysis...');
+      console.log('Git diff length:', gitDiff.length);
+      console.log('Jira details length:', jiraDetails.length);
     }
 
     // Validate inputs
@@ -261,11 +356,11 @@ async function main(gitDiff, jiraDetails) {
     // Output the analysis
     console.log(analysis);
 
-    if (process.env.DEBUG === "true") {
-      console.log("PR analysis completed successfully!");
+    if (process.env.DEBUG === 'true') {
+      console.log('PR analysis completed successfully!');
     }
   } catch (error) {
-    console.error("Error:", error.message);
+    console.error('Error:', error.message);
     process.exit(1);
   }
 }
@@ -277,8 +372,8 @@ if (args.length < 1) {
   usage();
 }
 
-const gitDiff = args[0] || "";
-const jiraDetails = args[1] || "";
+const gitDiff = args[0] || '';
+const jiraDetails = args[1] || '';
 
 // Check environment variables
 checkEnvironment();
