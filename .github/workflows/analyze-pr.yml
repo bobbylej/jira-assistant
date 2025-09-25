@@ -12,9 +12,12 @@ on:
 jobs:
   analyze-pr:
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: write
     outputs:
       code-diff: ${{ steps.get-diff.outputs.diff }}
-      jira-ticket: ${{ steps.get-jira-ticket.outputs.ticket }}
+      jira-ticket: ${{ steps.get-jira-ticket-id.outputs.ticket }}
       jira-details: ${{ steps.get-jira-details.outputs.details }}
       analysis: ${{ steps.analyze-pr.outputs.analysis }}
     steps:
@@ -83,15 +86,72 @@ jobs:
         id: analyze-pr
         if: steps.get-diff.outputs.diff != ''
         run: |
-          # Analyze PR using Claude AI
-          ANALYSIS=$(node ./scripts/analyze-pr/analyze-pr.js "${{ steps.get-diff.outputs.diff }}" "${{ steps.get-jira-details.outputs.details }}")
-
-          # Set output
-          echo "analysis<<EOF" >> $GITHUB_OUTPUT
-          echo "$ANALYSIS" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          # Create temporary files for the inputs first (using cat with here-doc to avoid shell interpretation)
+          cat > /tmp/git_diff.txt << 'EOF'
+          ${{ steps.get-diff.outputs.diff }}
+          EOF
+          cat > /tmp/jira_details.txt << 'EOF'
+          ${{ steps.get-jira-details.outputs.details }}
+          EOF
+          
+          # Debug: Check if we have the required data (after files are created)
+          echo "Checking inputs..."
+          echo "Diff length: $(wc -c < /tmp/git_diff.txt)"
+          echo "Jira details length: $(wc -c < /tmp/jira_details.txt)"
+          
+          # Debug: Verify files were created
+          echo "Created files:"
+          ls -la /tmp/git_diff.txt /tmp/jira_details.txt
+          echo "Git diff file size: $(wc -c < /tmp/git_diff.txt)"
+          echo "Jira details file size: $(wc -c < /tmp/jira_details.txt)"
+          
+          # Debug: Check environment variable
+          if [ -z "$CLAUDE_API_KEY" ]; then
+            echo "ERROR: CLAUDE_API_KEY is not set!"
+            exit 1
+          else
+            echo "CLAUDE_API_KEY is set (length: ${#CLAUDE_API_KEY})"
+          fi
+          
+          # Debug: Check Node.js and script availability
+          echo "Checking Node.js version:"
+          node --version
+          echo "Checking if script exists and is readable:"
+          ls -la ./scripts/analyze-pr/analyze-pr.js
+          echo "Script permissions:"
+          file ./scripts/analyze-pr/analyze-pr.js
+          
+          # Make sure script is executable
+          chmod +x ./scripts/analyze-pr/analyze-pr.js
+          
+          # Test if script can run (should show usage)
+          echo "Testing script execution (should show usage):"
+          node ./scripts/analyze-pr/analyze-pr.js || echo "Script test completed"
+          
+          # Debug: Show first few lines of inputs
+          echo "First 200 characters of git diff:"
+          head -c 200 /tmp/git_diff.txt
+          echo ""
+          echo "First 200 characters of jira details:"
+          head -c 200 /tmp/jira_details.txt
+          echo ""
+          
+          # Analyze PR using Claude AI with error handling
+          echo "Starting analysis..."
+          if ANALYSIS=$(node ./scripts/analyze-pr/analyze-pr.js "$(cat /tmp/git_diff.txt)" "$(cat /tmp/jira_details.txt)" 2>&1); then
+            echo "Analysis completed successfully"
+            # Set output
+            echo "analysis<<EOF" >> $GITHUB_OUTPUT
+            echo "$ANALYSIS" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "Analysis failed with exit code $?"
+            echo "Error output: $ANALYSIS"
+            exit 1
+          fi
         env:
           CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+          DEBUG: "true"
 
       - name: Comment PR with Analysis
         if: steps.analyze-pr.outputs.analysis != ''
@@ -102,5 +162,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## 🤖 AI-Powered PR Analysis\n\n${{ steps.analyze-pr.outputs.analysis }}`
+              body: '## 🤖 AI-Powered PR Analysis\n\n' + process.env.ANALYSIS_CONTENT
             })
+        env:
+          ANALYSIS_CONTENT: ${{ steps.analyze-pr.outputs.analysis }}
