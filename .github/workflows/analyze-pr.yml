@@ -1,4 +1,4 @@
-name: Analyze PR
+name: Analyze Pull Request
 
 on:
   pull_request:
@@ -10,11 +10,14 @@ on:
   workflow_dispatch:
 
 jobs:
-  analyze-pr:
+  analyze-pull-request:
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: write
     outputs:
       code-diff: ${{ steps.get-diff.outputs.diff }}
-      jira-ticket: ${{ steps.get-jira-ticket.outputs.ticket }}
+      jira-ticket: ${{ steps.get-jira-ticket-id.outputs.ticket }}
       jira-details: ${{ steps.get-jira-details.outputs.details }}
       analysis: ${{ steps.analyze-pr.outputs.analysis }}
     steps:
@@ -83,8 +86,19 @@ jobs:
         id: analyze-pr
         if: steps.get-diff.outputs.diff != ''
         run: |
+          # Create temporary files for the inputs
+          cat > /tmp/git_diff.txt << 'EOF'
+          ${{ steps.get-diff.outputs.diff }}
+          EOF
+          cat > /tmp/jira_details.txt << 'EOF'
+          ${{ steps.get-jira-details.outputs.details }}
+          EOF
+
           # Analyze PR using Claude AI
-          ANALYSIS=$(node ./scripts/analyze-pr/analyze-pr.js "${{ steps.get-diff.outputs.diff }}" "${{ steps.get-jira-details.outputs.details }}")
+          ANALYSIS=$(node ./scripts/analyze-pr/analyze-pr.js "$(cat /tmp/git_diff.txt)" "$(cat /tmp/jira_details.txt)")
+
+          # Clean up temporary files
+          rm -f /tmp/git_diff.txt /tmp/jira_details.txt
 
           # Set output
           echo "analysis<<EOF" >> $GITHUB_OUTPUT
@@ -92,6 +106,8 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
         env:
           CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+          OPEN_AI_API_KEY: ${{ secrets.OPEN_AI_API_KEY }}
+          DEBUG: "true"
 
       - name: Comment PR with Analysis
         if: steps.analyze-pr.outputs.analysis != ''
@@ -102,5 +118,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## 🤖 AI-Powered PR Analysis\n\n${{ steps.analyze-pr.outputs.analysis }}`
+              body: process.env.ANALYSIS_CONTENT
             })
+        env:
+          ANALYSIS_CONTENT: ${{ steps.analyze-pr.outputs.analysis }}

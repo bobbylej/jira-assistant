@@ -5,6 +5,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { configureEngine } from '@doit-jira/engine';
+import { AIProviderType } from '@doit-jira/engine/dist/adapters/ai/types';
 
 // Load environment variables
 dotenv.config();
@@ -39,13 +40,18 @@ if (!fs.existsSync(logsDir)) {
 }
 
 console.log('OPENAI_API_KEY', process.env.OPENAI_API_KEY);
+console.log('GEMINI_API_KEY', process.env.GEMINI_API_KEY);
 console.log('JIRA_BASE_URL', process.env.JIRA_BASE_URL);
 console.log('JIRA_EMAIL', process.env.JIRA_EMAIL);
 console.log('JIRA_API_TOKEN', process.env.JIRA_API_TOKEN);
 
+const aiProvider = process.env.AI_PROVIDER as AIProviderType || 'gemini';
+const aiApiKey = process.env[`${aiProvider.toUpperCase()}_API_KEY`] || '';
+
 // Configure the engine
 const engine = configureEngine({
-  openaiApiKey: process.env.OPENAI_API_KEY || '',
+  aiApiKey,
+  aiProvider,
   jiraBaseUrl: process.env.JIRA_BASE_URL || '',
   jiraEmail: process.env.JIRA_EMAIL || '',
   jiraApiToken: process.env.JIRA_API_TOKEN || '',

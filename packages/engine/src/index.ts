@@ -1,15 +1,17 @@
-import { createOpenAIClient } from './adapters/openai/client';
-import { configureJiraService } from './core/jira';
-import { configureIntentService, configureCommandService } from './core/ai';
-import { configureTranscriptionService } from './core/ai/transcriptionService';
-import { configureMessageStore } from './core/chat/messageStore';
-import { configureChatManager } from './core/chat/chatManager';
-import { configureLogger, Logger } from './utils/logger';
-import { createJiraClient, jiraRequest } from './core/jira/client';
-import { JiraClient } from './core/jira/types';
+import { createOpenAIClient } from "./adapters/openai/client";
+import { configureJiraService } from "./core/jira";
+import { configureIntentService, configureCommandService } from "./core/ai";
+import { configureTranscriptionService } from "./core/ai/transcriptionService";
+import { configureMessageStore } from "./core/chat/messageStore";
+import { configureChatManager } from "./core/chat/chatManager";
+import { configureLogger, Logger } from "./utils/logger";
+import { createJiraClient, jiraRequest } from "./core/jira/client";
+import { JiraClient } from "./core/jira/types";
+import { AIProviderType } from "./adapters/ai/types";
 
 export interface EngineConfig {
-  openaiApiKey: string;
+  aiApiKey: string;
+  aiProvider: AIProviderType;
   jiraBaseUrl: string;
   jiraEmail: string;
   jiraApiToken: string;
@@ -17,26 +19,31 @@ export interface EngineConfig {
   dataDir: string;
 }
 
-async function validateJiraCredentials(jiraClient: JiraClient, logger: Logger): Promise<boolean> {
+async function validateJiraCredentials(
+  jiraClient: JiraClient,
+  logger: Logger
+): Promise<boolean> {
   try {
-    logger.info('Validating Jira credentials...');
-    
+    logger.info("Validating Jira credentials...");
+
     // Try to get the current user information
     const response = await jiraRequest<any>(
       jiraClient,
-      '/rest/api/3/myself',
-      'GET'
+      "/rest/api/3/myself",
+      "GET"
     );
-    
+
     if (response && response.accountId) {
-      logger.info(`Jira authentication successful. Connected as: ${response.displayName} (${response.emailAddress})`);
+      logger.info(
+        `Jira authentication successful. Connected as: ${response.displayName} (${response.emailAddress})`
+      );
       return true;
     } else {
-      logger.error('Jira authentication failed: Invalid response');
+      logger.error("Jira authentication failed: Invalid response");
       return false;
     }
   } catch (error) {
-    logger.error('Jira authentication failed:', error);
+    logger.error("Jira authentication failed:", error);
     return false;
   }
 }
@@ -44,44 +51,51 @@ async function validateJiraCredentials(jiraClient: JiraClient, logger: Logger): 
 export function configureEngine(config: EngineConfig) {
   // Configure logger
   const logger = configureLogger(config.logsDir);
-  
+
   // Initialize OpenAI client
-  const openai = createOpenAIClient({ apiKey: config.openaiApiKey });
-  
+  const openai = createOpenAIClient({
+    apiKey: config.aiApiKey,
+    provider: config.aiProvider,
+  });
+
   // Initialize Jira service
   const jiraService = configureJiraService({
     baseUrl: config.jiraBaseUrl,
     email: config.jiraEmail,
-    apiToken: config.jiraApiToken
+    apiToken: config.jiraApiToken,
   });
-  
+
   // Initialize AI services
   const intentService = configureIntentService(openai);
   const commandService = configureCommandService(openai, jiraService);
-  const transcriptionService = configureTranscriptionService(openai, { tempDir: config.dataDir });
-  
+  const transcriptionService = configureTranscriptionService(openai, {
+    tempDir: config.dataDir,
+  });
+
   // Initialize chat services
   const messageStore = configureMessageStore({ dataDir: config.dataDir });
   const chatManager = configureChatManager(messageStore);
-  
+
   // Create Jira client
   const jiraClient = createJiraClient({
     baseUrl: config.jiraBaseUrl,
     email: config.jiraEmail,
-    apiToken: config.jiraApiToken
+    apiToken: config.jiraApiToken,
   });
-  
+
   // Validate Jira credentials
   validateJiraCredentials(jiraClient, logger)
-    .then(isValid => {
+    .then((isValid) => {
       if (!isValid) {
-        logger.error('WARNING: Jira credentials validation failed. The application may not work correctly.');
+        logger.error(
+          "WARNING: Jira credentials validation failed. The application may not work correctly."
+        );
       }
     })
-    .catch(error => {
-      logger.error('Error validating Jira credentials:', error);
+    .catch((error) => {
+      logger.error("Error validating Jira credentials:", error);
     });
-  
+
   // Return the public API
   return {
     // Chat management
@@ -92,13 +106,13 @@ export function configureEngine(config: EngineConfig) {
     getChats: chatManager.getChats,
     addMessage: chatManager.addMessage,
     getMessages: chatManager.getMessages,
-    
+
     // AI capabilities
     determineIntent: intentService.determineIntent,
     interpretCommand: commandService.interpretCommand,
     executeAction: commandService.executeAction,
     transcribeAudio: transcriptionService.transcribeAudio,
-    
+
     // Jira operations
     getIssue: jiraService.getIssue,
     searchIssues: jiraService.searchIssues,
@@ -114,9 +128,9 @@ export function configureEngine(config: EngineConfig) {
     updateIssuePriority: jiraService.updateIssuePriority,
     linkIssues: jiraService.linkIssues,
     updateIssue: jiraService.updateIssue,
-    
+
     // Utilities
-    logToFile: logger.logToFile
+    logToFile: logger.logToFile,
   };
 }
 
