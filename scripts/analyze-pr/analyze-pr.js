@@ -138,7 +138,7 @@ Please provide a structured analysis in the following markdown format:
 # Pull Request Analysis
 
 ## Business Logic Summary
-Provide a concise summary (2-3 sentences) of what business logic was implemented in this PR based on the code changes and Jira ticket.
+List the key business logic changes implemented in this PR based on the code changes and Jira ticket.
 
 ## QA Testing Guidelines
 List specific areas and scenarios that QA testers should focus on to ensure everything works as expected:
