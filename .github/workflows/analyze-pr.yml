@@ -1,4 +1,4 @@
-name: Analyze PR
+name: Analyze Pull Request
 
 on:
   pull_request:
@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  analyze-pr:
+  analyze-pull-request:
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
@@ -93,7 +93,7 @@ jobs:
           cat > /tmp/jira_details.txt << 'EOF'
           ${{ steps.get-jira-details.outputs.details }}
           EOF
-          
+
           # Analyze PR using Claude AI
           ANALYSIS=$(node ./scripts/analyze-pr/analyze-pr.js "$(cat /tmp/git_diff.txt)" "$(cat /tmp/jira_details.txt)")
 
@@ -106,6 +106,8 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
         env:
           CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+          OPEN_AI_API_KEY: ${{ secrets.OPEN_AI_API_KEY }}
+          DEBUG: "true"
 
       - name: Comment PR with Analysis
         if: steps.analyze-pr.outputs.analysis != ''
