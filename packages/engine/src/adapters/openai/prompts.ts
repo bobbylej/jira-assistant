@@ -354,6 +354,10 @@ export const JIRA_TOOLS: ChatCompletionTool[] = [
             description:
               "New issue type (e.g., Bug, Task, Story) (only updated if provided)",
           },
+          parent: {
+            type: "string",
+            description: "The key of the parent issue for updating subtasks",
+          },
           priority: {
             type: "string",
             description:
