@@ -258,6 +258,8 @@ async function main(ticketId) {
     // Extract key information
     const fields = ticketDetails.fields;
     const summary = fields.summary || 'No summary';
+    console.log('fields', Object.keys(fields));
+    
     const description = fields.description
       ? extractTextContent(fields.description)
       : 'No description';

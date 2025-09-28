@@ -82,32 +82,31 @@ jobs:
           echo "$DIFF" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Analyze PR Changes
-        id: analyze-pr
-        if: steps.get-diff.outputs.diff != ''
-        run: |
-          # Create temporary files for the inputs
-          cat > /tmp/git_diff.txt << 'EOF'
-          ${{ steps.get-diff.outputs.diff }}
-          EOF
-          cat > /tmp/jira_details.txt << 'EOF'
-          ${{ steps.get-jira-details.outputs.details }}
-          EOF
+      # - name: Analyze PR Changes
+      #   id: analyze-pr
+      #   if: steps.get-diff.outputs.diff != ''
+      #   run: |
+      #     # Create temporary files for the inputs
+      #     cat > /tmp/git_diff.txt << 'EOF'
+      #     ${{ steps.get-diff.outputs.diff }}
+      #     EOF
+      #     cat > /tmp/jira_details.txt << 'EOF'
+      #     ${{ steps.get-jira-details.outputs.details }}
+      #     EOF
 
-          # Analyze PR using Claude AI
-          ANALYSIS=$(node ./scripts/analyze-pr/analyze-pr.js "$(cat /tmp/git_diff.txt)" "$(cat /tmp/jira_details.txt)")
+      #     # Analyze PR using Claude AI
+      #     ANALYSIS=$(node ./scripts/analyze-pr/analyze-pr.js "$(cat /tmp/git_diff.txt)" "$(cat /tmp/jira_details.txt)")
 
-          # Clean up temporary files
-          rm -f /tmp/git_diff.txt /tmp/jira_details.txt
+      #     # Clean up temporary files
+      #     rm -f /tmp/git_diff.txt /tmp/jira_details.txt
 
-          # Set output
-          echo "analysis<<EOF" >> $GITHUB_OUTPUT
-          echo "$ANALYSIS" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-        env:
-          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
-          OPEN_AI_API_KEY: ${{ secrets.OPEN_AI_API_KEY }}
-          DEBUG: "true"
+      #     # Set output
+      #     echo "analysis<<EOF" >> $GITHUB_OUTPUT
+      #     echo "$ANALYSIS" >> $GITHUB_OUTPUT
+      #     echo "EOF" >> $GITHUB_OUTPUT
+      #   env:
+      #     CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+      #     OPEN_AI_API_KEY: ${{ secrets.OPEN_AI_API_KEY }}
 
       - name: Comment PR with Analysis
         if: steps.analyze-pr.outputs.analysis != ''
